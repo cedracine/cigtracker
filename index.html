@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CigTracker">
+<link rel="manifest" href="manifest.json">
+<title>☠ CigTracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --accent: #ffd700;
+    --text: #fff;
+    --card: rgba(255,255,255,0.08);
+    --card-border: rgba(255,255,255,0.15);
+    --transition: 1.5s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Courier Prime', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background var(--transition);
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background: var(--bg);
+    transition: background var(--transition);
+  }
+  .bg-noise {
+    position: fixed; inset: 0; z-index: 1; opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .app {
+    position: relative; z-index: 2;
+    max-width: 420px; margin: 0 auto;
+    padding: 0 16px 100px;
+    min-height: 100vh;
+  }
+
+
+
+  /* Settings Panel */
+  .settings-panel {
+    position: fixed; inset: 0; z-index: 90;
+    background: #0d0d1a; overflow-y: auto;
+    transform: translateX(-100%); transition: transform 0.35s ease;
+  }
+  .settings-panel.open { transform: translateX(0); }
+
+  .settings-section {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+  }
+  .settings-danger-zone { border-color: rgba(255,60,60,0.35); }
+  .settings-section-title {
+    font-family: 'Bebas Neue', cursive; font-size: 13px;
+    letter-spacing: 3px; opacity: 0.5; margin-bottom: 12px;
+  }
+  .settings-label {
+    font-size: 10px; letter-spacing: 1px; opacity: 0.55;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+
+  /* Language tiles */
+  .lang-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  /* Non-latin script fallback — use system font for tiles with these langs */
+  .lang-tile { font-family: 'Courier Prime', system-ui, sans-serif; }
+  /* For CJK/Indic/SEA scripts, ensure system fonts render correctly */
+  :lang(zh), :lang(hi), :lang(vi), :lang(th), :lang(km) { font-family: system-ui, sans-serif; }
+  .lang-tile {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--card-border);
+    color: var(--text); padding: 10px 8px; border-radius: 10px;
+    font-family: 'Courier Prime', monospace; font-size: 13px;
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .lang-tile:active { transform: scale(0.96); }
+  .lang-tile.active {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  /* Threshold grid */
+  .threshold-grid {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .threshold-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .threshold-swatch {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid currentColor;
+  }
+  .threshold-label {
+    font-size: 11px; opacity: 0.6; min-width: 120px; letter-spacing: 1px;
+  }
+  .threshold-input {
+    background: rgba(255,255,255,0.08); border: 1px solid var(--card-border);
+    color: var(--text); padding: 5px 10px; border-radius: 8px;
+    font-family: 'Courier Prime', monospace; font-size: 14px;
+    width: 64px; text-align: center;
+  }
+  .threshold-input:focus { outline: none; border-color: var(--accent); }
+
+  /* Data buttons */
+  .settings-row-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--card-border);
+    color: var(--text); padding: 12px 14px; border-radius: 10px;
+    font-family: 'Courier Prime', monospace; font-size: 13px;
+    cursor: pointer; width: 100%; text-align: left; margin-bottom: 8px;
+    transition: all 0.15s;
+  }
+  .settings-row-btn:active { transform: scale(0.98); }
+
+  /* Date range */
+  .date-range-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .settings-date-input {
+    background: rgba(255,255,255,0.08); border: 1px solid var(--card-border);
+    color: var(--text); padding: 8px 10px; border-radius: 8px;
+    font-family: 'Courier Prime', monospace; font-size: 13px;
+    width: 100%; color-scheme: dark;
+  }
+  .settings-date-input:focus { outline: none; border-color: var(--accent); }
+  .delete-preview {
+    font-size: 11px; opacity: 0.6; letter-spacing: 1px;
+    margin-bottom: 10px; min-height: 16px;
+  }
+
+  /* Action buttons */
+  .settings-btn-primary {
+    flex: 1; background: var(--accent); color: #111;
+    border: none; padding: 10px 16px; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 15px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.15s; font-weight: 700;
+  }
+  .settings-btn-secondary {
+    flex: 1; background: rgba(255,255,255,0.08); color: var(--text);
+    border: 1px solid var(--card-border); padding: 10px 16px; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 15px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .settings-btn-danger {
+    width: 100%; background: rgba(255,50,50,0.15); color: #ff6060;
+    border: 1px solid rgba(255,60,60,0.4); padding: 12px 16px; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 15px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .settings-btn-danger:active { background: rgba(255,50,50,0.3); transform: scale(0.98); }
+
+  /* Gear button */
+  .gear-btn {
+    background: var(--card); border: 1px solid var(--card-border);
+    color: var(--text); width: 36px; height: 36px; border-radius: 50%;
+    font-size: 17px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: all 0.2s; opacity: 0.7;
+  }
+  .gear-btn:hover { opacity: 1; }
+  .gear-btn:active { transform: rotate(45deg) scale(0.9); }
+  /* Header */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0 10px;
+  }
+  .logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px; letter-spacing: 3px;
+    color: var(--accent);
+    text-shadow: 0 0 20px currentColor;
+  }
+  .stats-btn {
+    background: var(--accent); border: none;
+    color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-family: 'Bebas Neue', cursive; font-size: 16px;
+    font-weight: 700; cursor: pointer; letter-spacing: 2px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .stats-btn:active { transform: scale(0.95); }
+
+  /* Avg display */
+  .avg-display {
+    text-align: center; padding: 16px 0 8px;
+  }
+  .avg-number {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 80px; line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 60%, transparent);
+    transition: color var(--transition), text-shadow var(--transition);
+  }
+  .avg-label {
+    font-size: 11px; letter-spacing: 3px; opacity: 0.6;
+    text-transform: uppercase; margin-top: 4px;
+  }
+  .avg-sublabel {
+    font-size: 10px; opacity: 0.4; letter-spacing: 2px; margin-top: 2px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex; flex-direction: column; gap: 8px; margin: 8px 0;
+  }
+  .status-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .stat-card-sm {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 10px 14px; text-align: center;
+  }
+  .stat-card-sm .val {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px; color: var(--accent);
+    transition: color var(--transition);
+  }
+  .stat-card-sm .lbl { font-size: 9px; opacity: 0.5; letter-spacing: 1px; text-transform: uppercase; }
+  /* Tendance card */
+  .trend-good   { color: #4caf50 !important; }
+  .trend-bad    { color: #ff5252 !important; }
+  .trend-stable { color: #ff9800 !important; }
+  /* Last-pack hero card */
+  .hero-card {
+    background: var(--card); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 12px 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 20%, transparent);
+    transition: border-color 1s, box-shadow 1s;
+  }
+  .hero-label { font-size: 9px; opacity: 0.5; letter-spacing: 2px; text-transform: uppercase; }
+  .hero-main-row {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 16px; width: 100%;
+  }
+  .hero-avg-block {
+    display: flex; flex-direction: column; align-items: center;
+    padding-bottom: 6px;
+  }
+  .hero-avg-val {
+    font-family: 'Bebas Neue', cursive; font-size: 26px; line-height: 1;
+    color: var(--accent); opacity: 0.75;
+    transition: color 1s;
+  }
+  .hero-avg-lbl {
+    font-size: 8px; opacity: 0.4; letter-spacing: 1px; text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .hero-number {
+    font-family: 'Bebas Neue', cursive; font-size: 52px; line-height: 1;
+    color: var(--accent); transition: color 1s;
+    text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: heroBreath 3s ease-in-out infinite;
+  }
+  @keyframes heroBreath {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.82; transform: scale(0.97); }
+  }
+  .hero-sublabel { font-size: 10px; opacity: 0.45; letter-spacing: 1px; }
+  /* Progress bar */
+  .hero-bar-wrap {
+    width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+    border-radius: 3px; overflow: hidden;
+  }
+  .hero-bar {
+    height: 100%; border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.8s ease, background 1s;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* BIG BUTTON */
+  .btn-zone {
+    display: flex; justify-content: center; padding: 20px 0;
+  }
+  .skull-btn {
+    width: 160px; height: 160px; border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: radial-gradient(circle at 45% 38%, rgba(255,215,0,0.12), rgba(0,0,0,0.7));
+    cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 0 35px color-mix(in srgb, var(--accent) 35%, transparent),
+                inset 0 0 30px rgba(0,0,0,0.5);
+    position: relative; overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+  }
+  .skull-btn::after {
+    content: '';
+    position: absolute; inset: -50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .skull-btn:active {
+    transform: scale(0.92);
+    box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 60%, transparent),
+                inset 0 0 40px rgba(0,0,0,0.7);
+  }
+  .skull-btn:active::after { opacity: 1; }
+  /* skull emoji replaced by SVG */
+  .skull-label {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px; letter-spacing: 3px; color: var(--accent);
+    margin-top: 2px; position: relative; z-index: 2;
+  }
+
+  /* Pulse animation */
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+  .skull-btn.pulsing::before {
+    content: '';
+    position: absolute; inset: -10px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: pulse-ring 0.6s ease-out;
+  }
+
+  /* Pack list */
+  .section-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px; letter-spacing: 3px; opacity: 0.5;
+    margin: 8px 0;
+  }
+  .pack-list { display: flex; flex-direction: column; gap: 6px; }
+  .pack-item {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .pack-num {
+    font-family: 'Bebas Neue', cursive; font-size: 20px;
+    color: var(--accent); min-width: 28px;
+    transition: color var(--transition);
+  }
+  .pack-info { flex: 1; }
+  .pack-datetime { font-size: 13px; font-weight: 700; }
+  .pack-delta { font-size: 10px; opacity: 0.5; margin-top: 1px; }
+  .pack-actions { display: flex; gap: 6px; }
+  .pack-action-btn {
+    background: none; border: 1px solid var(--card-border);
+    color: var(--text); width: 30px; height: 30px; border-radius: 6px;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .pack-action-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+  .pack-action-btn.del { border-color: rgba(255,80,80,0.4); }
+  .pack-action-btn.del:active { background: rgba(255,80,80,0.2); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #1a1a2e; border: 1px solid var(--card-border);
+    border-radius: 20px 20px 0 0; padding: 24px;
+    width: 100%; max-width: 420px;
+    transform: translateY(100%); transition: transform 0.3s ease;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal h2 {
+    font-family: 'Bebas Neue', cursive; font-size: 22px;
+    letter-spacing: 3px; margin-bottom: 16px; color: var(--accent);
+  }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 11px; letter-spacing: 2px; opacity: 0.6; margin-bottom: 6px; }
+  .form-row input[type="datetime-local"] {
+    width: 100%; background: var(--card); border: 1px solid var(--card-border);
+    color: var(--text); padding: 10px 12px; border-radius: 8px;
+    font-family: 'Courier Prime', monospace; font-size: 14px;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-primary {
+    flex: 1; background: var(--accent); color: #1a1a1a;
+    border: none; padding: 12px; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 16px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    flex: 1; background: var(--card); color: var(--text);
+    border: 1px solid var(--card-border); padding: 12px; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 16px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-secondary:active { transform: scale(0.97); }
+
+  /* Stats panel */
+  .stats-panel {
+    position: fixed; inset: 0; z-index: 90;
+    background: #0d0d1a; overflow-y: auto;
+    transform: translateX(100%); transition: transform 0.35s ease;
+  }
+  .stats-panel.open { transform: translateX(0); }
+  .stats-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .back-btn {
+    background: none; border: none; color: var(--accent);
+    font-size: 22px; cursor: pointer; padding: 4px;
+  }
+  .stats-header h2 {
+    font-family: 'Bebas Neue', cursive; font-size: 22px;
+    letter-spacing: 3px; color: var(--accent);
+  }
+  .stats-content { padding: 16px; }
+
+  /* Chart */
+  .chart-section { margin: 16px 0; }
+  .chart-title { font-family: 'Bebas Neue', cursive; font-size: 14px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 8px; }
+  .chart-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.03); touch-action: pan-y; user-select: none; }
+  .chart-wrap canvas { display: block; width: 100% !important; border-radius: 10px; cursor: grab; }
+  .chart-wrap canvas:active { cursor: grabbing; }
+  .chart-hint { font-size: 9px; opacity: 0.3; letter-spacing: 1px; text-align: center; margin-top: 3px; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 14px;
+  }
+  .stat-card .big { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--accent); transition: color var(--transition); }
+  .stat-card .small { font-size: 10px; opacity: 0.5; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: rgba(30,30,50,0.95); border: 1px solid var(--card-border);
+    color: var(--text); padding: 12px 20px; border-radius: 30px;
+    font-size: 13px; letter-spacing: 1px; z-index: 200;
+    transition: transform 0.3s; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.3); border-radius: 4px; }
+
+  /* Bg layer transitions smoothly — colors set via JS */
+  .bg-layer { transition: background 2s ease; }
+
+  .color-legend {
+    display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; align-items: center;
+    justify-content: center;
+  }
+  .legend-pill {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 12px; letter-spacing: 1px; opacity: 0.75;
+    padding: 2px 8px; border-radius: 20px; border: 1.5px solid currentColor;
+    line-height: 1.4;
+  }
+  .legend-arrow {
+    font-size: 10px; opacity: 0.35; color: #fff;
+  }
+
+  .import-section { margin: 16px 0; }
+  .import-btn {
+    background: var(--card); border: 1px solid var(--card-border);
+    color: var(--text); padding: 10px 16px; border-radius: 8px;
+    font-family: 'Courier Prime', monospace; font-size: 12px;
+    cursor: pointer; letter-spacing: 1px; width: 100%; text-align: left;
+  }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="bg-noise"></div>
+
+<div class="app">
+  <header>
+    <div class="logo">☠ CIGTRACKER</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="gear-btn" onclick="openSettings()" title="Paramètres">⚙</button>
+      <button class="stats-btn" id="statsBtn2" onclick="openStats()">STATS ▸</button>
+    </div>
+  </header>
+
+  <div class="avg-display">
+    <div class="avg-number" id="avgNumber">–</div>
+    <div class="avg-label" data-i18n="avg_label">CIG / JOUR (MOY. 3 JOURS)</div>
+  </div>
+
+  <div class="color-legend">
+    <span class="legend-pill" style="border-color:#ffd700;color:#ffd700;">&lt;10</span>
+    <span class="legend-pill" style="border-color:#56cfe1;color:#56cfe1;">10</span>
+    <span class="legend-pill" style="border-color:#52b788;color:#52b788;">15</span>
+    <span class="legend-pill" style="border-color:#a8c060;color:#a8c060;">16</span>
+    <span class="legend-pill" style="border-color:#ff9800;color:#ff9800;">20</span>
+    <span class="legend-pill" style="border-color:#ff6600;color:#ff6600;">21</span>
+    <span class="legend-pill" style="border-color:#ff2222;color:#ff2222;">30</span>
+    <span class="legend-pill" style="border-color:#aa00cc;color:#aa00cc;">31</span>
+    <span class="legend-pill" style="border-color:#7b00d4;color:#7b00d4;">40+</span>
+  </div>
+
+  <div class="status-bar">
+    <!-- Row 1: Tendance + Pack/30j -->
+    <div class="status-row">
+      <div class="stat-card-sm">
+        <div class="val" id="statTrend">–</div>
+        <div class="lbl" data-i18n="trend_lbl">Tendance (7j)</div>
+      </div>
+      <div class="stat-card-sm">
+        <div class="val" id="statPPM">–</div>
+        <div class="lbl" data-i18n="pack7_lbl">Pack / 7j</div>
+      </div>
+    </div>
+    <!-- Row 2: Hero — heures depuis dernier paquet -->
+    <div class="hero-card">
+      <div class="hero-label" data-i18n="hero_lbl">HEURES DEPUIS DERNIER PAQUET</div>
+      <div class="hero-main-row">
+        <div class="hero-number" id="statLast">–</div>
+        <div class="hero-avg-block">
+          <div class="hero-avg-val" id="heroAvgH7">–</div>
+          <div class="hero-avg-lbl" data-i18n="avg7h_lbl">moy 7j</div>
+        </div>
+      </div>
+      <div class="hero-bar-wrap">
+        <div class="hero-bar" id="heroBar" style="width:0%"></div>
+      </div>
+      <div class="hero-sublabel" id="heroSublabel"></div>
+    </div>
+  </div>
+
+  <div class="btn-zone" style="position:relative;z-index:1;">
+    <!-- Decorative cigarettes layer — purely visual, no touch events -->
+    <svg class="cig-deco" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg"
+         style="position:absolute;width:260px;height:260px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:2;filter:drop-shadow(0 0 7px var(--accent));">
+      <!-- Top-left cig: filter visible up-left, tip (braise end) 10% into skull -->
+      <g transform="rotate(-38 130 130)">
+        <rect x="122" y="30" width="9" height="52" rx="2.5" fill="#f0ede0" opacity="0.93"/>
+        <rect x="122" y="24" width="9" height="11" rx="2.5" fill="#e07b3a"/>
+        <!-- filter cap top -->
+        <rect x="122" y="22" width="9" height="4" rx="1.5" fill="#c96030"/>
+        <!-- braise end hidden 10% into button at bottom of this cig -->
+        <circle cx="126" cy="82" r="4.5" fill="#ff5500" opacity="0.95"/>
+        <circle cx="126" cy="82" r="2.5" fill="#ffcc00"/>
+      </g>
+      <!-- Top-right cig -->
+      <g transform="rotate(38 130 130)">
+        <rect x="129" y="30" width="9" height="52" rx="2.5" fill="#f0ede0" opacity="0.93"/>
+        <rect x="129" y="24" width="9" height="11" rx="2.5" fill="#e07b3a"/>
+        <rect x="129" y="22" width="9" height="4" rx="1.5" fill="#c96030"/>
+        <circle cx="133" cy="82" r="4.5" fill="#ff5500" opacity="0.95"/>
+        <circle cx="133" cy="82" r="2.5" fill="#ffcc00"/>
+      </g>
+      <!-- Bottom-left cig: braise end up (10% hidden into skull), filter visible below -->
+      <g transform="rotate(-38 130 130)">
+        <!-- paper body -->
+        <rect x="122" y="178" width="9" height="52" rx="2.5" fill="#f0ede0" opacity="0.93"/>
+        <!-- filter cap bottom -->
+        <rect x="122" y="226" width="9" height="11" rx="2.5" fill="#e07b3a"/>
+        <rect x="122" y="234" width="9" height="4" rx="1.5" fill="#c96030"/>
+        <!-- braise at top, 10% into button -->
+        <circle cx="126" cy="178" r="4.5" fill="#ff5500" opacity="0.95"/>
+        <circle cx="126" cy="178" r="2.5" fill="#ffcc00"/>
+        <!-- smoke wisps rising from braise -->
+        <path d="M126 173 Q122 163 126 153 Q130 143 126 133" stroke="white" stroke-width="2" fill="none" opacity="0.28" stroke-linecap="round"/>
+        <path d="M129 170 Q133 160 129 151" stroke="white" stroke-width="1.2" fill="none" opacity="0.16" stroke-linecap="round"/>
+      </g>
+      <!-- Bottom-right cig -->
+      <g transform="rotate(38 130 130)">
+        <rect x="129" y="178" width="9" height="52" rx="2.5" fill="#f0ede0" opacity="0.93"/>
+        <rect x="129" y="226" width="9" height="11" rx="2.5" fill="#e07b3a"/>
+        <rect x="129" y="234" width="9" height="4" rx="1.5" fill="#c96030"/>
+        <circle cx="133" cy="178" r="4.5" fill="#ff5500" opacity="0.95"/>
+        <circle cx="133" cy="178" r="2.5" fill="#ffcc00"/>
+        <path d="M133 173 Q129 163 133 153 Q137 143 133 133" stroke="white" stroke-width="2" fill="none" opacity="0.28" stroke-linecap="round"/>
+        <path d="M130 170 Q126 160 130 151" stroke="white" stroke-width="1.2" fill="none" opacity="0.16" stroke-linecap="round"/>
+      </g>
+    </svg>
+
+    <!-- Actual button — tight circle, clipped -->
+    <button class="skull-btn" id="skullBtn" onclick="addPack()">
+      <svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"
+           style="width:100px;height:110px;pointer-events:none;">
+        <!-- SKULL only, no cigarettes -->
+        <ellipse cx="50" cy="46" rx="30" ry="28" fill="var(--accent)" opacity="0.93"/>
+        <rect x="28" y="65" width="44" height="16" rx="5" fill="var(--accent)" opacity="0.93"/>
+        <ellipse cx="38" cy="45" rx="9" ry="10" fill="#0a0a12"/>
+        <ellipse cx="62" cy="45" rx="9" ry="10" fill="#0a0a12"/>
+        <ellipse cx="46" cy="59" rx="4" ry="3.5" fill="#0a0a12"/>
+        <ellipse cx="54" cy="59" rx="4" ry="3.5" fill="#0a0a12"/>
+        <rect x="32" y="76" width="7" height="8" rx="2" fill="#0a0a12"/>
+        <rect x="43" y="76" width="7" height="8" rx="2" fill="#0a0a12"/>
+        <rect x="54" y="76" width="7" height="8" rx="2" fill="#0a0a12"/>
+        <rect x="65" y="76" width="7" height="8" rx="2" fill="#0a0a12"/>
+        <ellipse cx="40" cy="34" rx="9" ry="6" fill="white" opacity="0.12"/>
+      </svg>
+      <span class="skull-label" data-i18n="new_pack">NOUVEAU PAQUET</span>
+    </button>
+  </div>
+
+  <div class="section-title" data-i18n="history_title">HISTORIQUE RÉCENT</div>
+  <div class="pack-list" id="packList" style="position:relative;z-index:10;"></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2 id="modalTitle">MODIFIER</h2>
+    <div class="form-row">
+      <label data-i18n="date_time_lbl">DATE ET HEURE</label>
+      <input type="datetime-local" id="editDatetime">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" data-i18n="cancel_btn" onclick="closeModal()">ANNULER</button>
+      <button class="btn-primary" data-i18n="save_btn" onclick="saveEdit()">SAUVEGARDER</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Panel -->
+<div class="stats-panel" id="statsPanel">
+  <div class="stats-header">
+    <button class="back-btn" onclick="closeStats()">←</button>
+    <h2 data-i18n="stats_title">STATISTIQUES</h2>
+  </div>
+  <div class="stats-content">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="big" id="sAvg3">–</div>
+        <div class="small" data-i18n="cig3j">Cig/j (3j)</div>
+      </div>
+      <div class="stat-card">
+        <div class="big" id="sAvg30">–</div>
+        <div class="small" data-i18n="cig30j">Cig/j (30j)</div>
+      </div>
+      <div class="stat-card">
+        <div class="big" id="sAvgH3">–</div>
+        <div class="small" data-i18n="h3j">H/paquet (moy 3j)</div>
+      </div>
+      <div class="stat-card">
+        <div class="big" id="sAvgH30">–</div>
+        <div class="small" data-i18n="h30j">H/paquet (moy 30j)</div>
+      </div>
+    </div>
+    <div class="chart-section">
+      <div class="chart-title"><span data-i18n="chart1_title">CIG/JOUR — MOY. 3J</span> <span id="chartRangeLabel" style="opacity:0.45;font-size:9px;letter-spacing:1px;font-family:'Courier Prime',monospace;"></span></div>
+      <div class="chart-wrap" id="chartDailyWrap">
+        <canvas id="chartDaily"></canvas>
+      </div>
+      <div class="chart-hint" data-i18n="swipe_hint">← glisser pour naviguer →</div>
+    </div>
+    <div class="chart-section">
+      <div class="chart-title" data-i18n="chart2_title">INTERVALLE ENTRE PAQUETS (heures)</div>
+      <div class="chart-wrap" id="chartIntervalWrap">
+        <canvas id="chartInterval"></canvas>
+      </div>
+      <div class="chart-hint" data-i18n="swipe_hint">← glisser pour naviguer →</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Settings Panel -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="stats-header">
+    <button class="back-btn" onclick="closeSettings()">←</button>
+    <h2 data-i18n="settings_title">PARAMÈTRES</h2>
+  </div>
+  <div class="stats-content">
+
+    <!-- LANGUAGE -->
+    <div class="settings-section">
+      <div class="settings-section-title" data-i18n="s_lang">LANGUE</div>
+      <div class="lang-grid">
+        <button class="lang-tile active" id="ltile-fr" onclick="setLang('fr')">🇫🇷 Français</button>
+        <button class="lang-tile" id="ltile-en" onclick="setLang('en')">🇬🇧 English</button>
+        <button class="lang-tile" id="ltile-es" onclick="setLang('es')">🇪🇸 Español</button>
+        <button class="lang-tile" id="ltile-de" onclick="setLang('de')">🇩🇪 Deutsch</button>
+        <button class="lang-tile" id="ltile-it" onclick="setLang('it')">🇮🇹 Italiano</button>
+        <button class="lang-tile" id="ltile-pt" onclick="setLang('pt')">🇧🇷 Português</button>
+        <button class="lang-tile" id="ltile-ru" onclick="setLang('ru')">🇷🇺 Русский</button>
+        <button class="lang-tile" id="ltile-zh" onclick="setLang('zh')">🇨🇳 中文</button>
+        <button class="lang-tile" id="ltile-hi" onclick="setLang('hi')">🇮🇳 हिंदी</button>
+        <button class="lang-tile" id="ltile-vi" onclick="setLang('vi')">🇻🇳 Tiếng Việt</button>
+        <button class="lang-tile" id="ltile-th" onclick="setLang('th')">🇹🇭 ภาษาไทย</button>
+        <button class="lang-tile" id="ltile-km" onclick="setLang('km')">🇰🇭 ខ្មែរ</button>
+      </div>
+    </div>
+
+    <!-- COLOR THRESHOLDS -->
+    <div class="settings-section">
+      <div class="settings-section-title" data-i18n="s_thresholds">SEUILS COULEURS (cig/jour)</div>
+      <div class="threshold-grid" id="thresholdGrid">
+        <!-- filled by JS -->
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="settings-btn-secondary" onclick="resetThresholds()" data-i18n="s_reset_thresh">↺ Défaut</button>
+        <button class="settings-btn-primary" onclick="applyThresholds()" data-i18n="s_apply">✓ Appliquer</button>
+      </div>
+    </div>
+
+    <!-- DATA -->
+    <div class="settings-section">
+      <div class="settings-section-title" data-i18n="s_data">DONNÉES</div>
+      <button class="settings-row-btn" onclick="exportData()">
+        <span>⬇</span><span data-i18n="export_btn">Exporter (JSON)</span>
+      </button>
+      <label class="settings-row-btn" style="cursor:pointer;">
+        <span>⬆</span><span data-i18n="import_btn">Importer (JSON)</span>
+        <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+      </label>
+    </div>
+
+    <!-- DELETE DATE RANGE -->
+    <div class="settings-section">
+      <div class="settings-section-title" data-i18n="s_delete_range">EFFACER PLAGE DE DATES</div>
+      <div class="date-range-grid">
+        <div>
+          <div class="settings-label" data-i18n="s_from">De</div>
+          <input type="date" id="deleteFrom" class="settings-date-input">
+        </div>
+        <div>
+          <div class="settings-label" data-i18n="s_to">À</div>
+          <input type="date" id="deleteTo" class="settings-date-input">
+        </div>
+      </div>
+      <div id="deleteRangePreview" class="delete-preview"></div>
+      <button class="settings-btn-danger" onclick="deleteRange()" data-i18n="s_delete_range_btn">🗑 Supprimer cette plage</button>
+    </div>
+
+    <!-- FULL RESET -->
+    <div class="settings-section settings-danger-zone">
+      <div class="settings-section-title" data-i18n="s_danger">ZONE DE DANGER</div>
+      <button class="settings-btn-danger" onclick="fullReset()" data-i18n="s_full_reset">☠ RÉINITIALISATION COMPLÈTE</button>
+      <div class="settings-label" data-i18n="s_full_reset_hint" style="margin-top:6px;opacity:0.4;">Efface toutes les données et remet les seuils par défaut</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ===================== i18n =====================
+const TRANSLATIONS = {
+  fr: {
+    avg_label: 'CIG / JOUR (MOY. 3 JOURS)',
+    trend_lbl: 'Tendance (7j)',
+    pack30_lbl: 'Pack / 30j',
+    pack7_lbl: 'Pack / 7j',
+    avg7h_lbl: 'moy. 7j',
+    hero_lbl: 'HEURES DEPUIS DERNIER PAQUET',
+    new_pack: 'NOUVEAU PAQUET',
+    history_title: 'HISTORIQUE RÉCENT',
+    date_time_lbl: 'DATE ET HEURE',
+    cancel_btn: 'ANNULER',
+    save_btn: 'SAUVEGARDER',
+    stats_title: 'STATISTIQUES',
+    cig3j: 'Cig/j (3j)',
+    cig30j: 'Cig/j (30j)',
+    h3j: 'H/paquet (moy 3j)',
+    h30j: 'H/paquet (moy 30j)',
+    chart1_title: 'CIG/JOUR — MOY. 3J',
+    chart2_title: 'INTERVALLE ENTRE PAQUETS (heures)',
+    swipe_hint: '← glisser pour naviguer →',
+    data_title: 'DONNÉES',
+    export_btn: '⬇ Exporter (JSON)',
+    import_btn: '⬆ Importer (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'MODIFIER LE PAQUET',
+    modal_add: 'NOUVEAU PAQUET',
+    toast_added: '📦 Paquet ajouté',
+    toast_deleted: '🗑 Paquet supprimé',
+    toast_edited: '✓ Modifié',
+    toast_imported: '✓ Données importées',
+    toast_invalid: '⚠ Fichier invalide',
+    settings_title: 'PARAMÈTRES',
+    s_lang: 'LANGUE',
+    s_thresholds: 'SEUILS COULEURS (cig/jour)',
+    s_zone1: 'Doré  < seuil 1',
+    s_zone2: 'Bleu→Vert  ≤ seuil 2',
+    s_zone3: 'Vert→Orange  ≤ seuil 3',
+    s_zone4: 'Orange→Rouge  ≤ seuil 4',
+    s_zone5: 'Rouge→Violet  ≤ seuil 5',
+    s_reset_thresh: '↺ Défaut',
+    s_apply: '✓ Appliquer',
+    s_data: 'DONNÉES',
+    s_delete_range: 'EFFACER PLAGE DE DATES',
+    s_from: 'De',
+    s_to: 'À',
+    s_delete_range_btn: '🗑 Supprimer cette plage',
+    s_danger: 'ZONE DE DANGER',
+    s_full_reset: '☠ RÉINITIALISATION COMPLÈTE',
+    s_full_reset_hint: 'Efface toutes les données et remet les seuils par défaut',
+    s_invalid_range: '⚠ Dates invalides',
+    s_packs_in_range: 'paquet(s) seront supprimés',
+    s_pick_dates: 'Choisissez une plage de dates',
+    toast_thresh_saved: '✓ Seuils sauvegardés',
+    toast_thresh_reset: '↺ Seuils réinitialisés',
+    toast_range_deleted: 'paquet(s) supprimé(s)',
+    toast_full_reset: '☠ Données effacées',
+    confirm_full_reset: 'Effacer TOUTES les données et remettre les seuils par défaut ?',
+    confirm_delete: 'Supprimer ce paquet ?',
+    days: ['dim','lun','mar','mer','jeu','ven','sam'],
+    months: ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'],
+    since_prev: 'depuis le précédent',
+    sub_less1h: "moins d'une heure",
+    sub_before: (rem, ref) => `encore ${rem}h avant la moy.`,
+    sub_near: (ref) => `presque à la moyenne (${ref}h)`,
+    sub_bravo: '✓ dépassé votre moyenne — bravo !',
+  },
+  en: {
+    avg_label: 'CIG / DAY (3-DAY AVG)',
+    trend_lbl: 'Trend (7d)',
+    pack30_lbl: 'Packs / 30d',
+    pack7_lbl: 'Packs / 7d',
+    avg7h_lbl: 'avg 7d',
+    hero_lbl: 'HOURS SINCE LAST PACK',
+    new_pack: 'NEW PACK',
+    history_title: 'RECENT HISTORY',
+    date_time_lbl: 'DATE & TIME',
+    cancel_btn: 'CANCEL',
+    save_btn: 'SAVE',
+    stats_title: 'STATISTICS',
+    cig3j: 'Cig/d (3d)',
+    cig30j: 'Cig/d (30d)',
+    h3j: 'H/pack (avg 3d)',
+    h30j: 'H/pack (avg 30d)',
+    chart1_title: 'CIG/DAY — 3D ROLLING AVG',
+    chart2_title: 'INTERVAL BETWEEN PACKS (hours)',
+    swipe_hint: '← swipe to navigate →',
+    data_title: 'DATA',
+    export_btn: '⬇ Export (JSON)',
+    import_btn: '⬆ Import (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'EDIT PACK',
+    modal_add: 'NEW PACK',
+    toast_added: '📦 Pack added',
+    toast_deleted: '🗑 Pack deleted',
+    toast_edited: '✓ Saved',
+    toast_imported: '✓ Data imported',
+    toast_invalid: '⚠ Invalid file',
+    settings_title: 'SETTINGS',
+    s_lang: 'LANGUAGE',
+    s_thresholds: 'COLOR THRESHOLDS (cig/day)',
+    s_zone1: 'Gold  < threshold 1',
+    s_zone2: 'Blue→Green  ≤ threshold 2',
+    s_zone3: 'Green→Orange  ≤ threshold 3',
+    s_zone4: 'Orange→Red  ≤ threshold 4',
+    s_zone5: 'Red→Purple  ≤ threshold 5',
+    s_reset_thresh: '↺ Reset',
+    s_apply: '✓ Apply',
+    s_data: 'DATA',
+    s_delete_range: 'DELETE DATE RANGE',
+    s_from: 'From',
+    s_to: 'To',
+    s_delete_range_btn: '🗑 Delete this range',
+    s_danger: 'DANGER ZONE',
+    s_full_reset: '☠ FULL RESET',
+    s_full_reset_hint: 'Erases all data and restores default thresholds',
+    s_invalid_range: '⚠ Invalid dates',
+    s_packs_in_range: 'pack(s) will be deleted',
+    s_pick_dates: 'Please select a date range',
+    toast_thresh_saved: '✓ Thresholds saved',
+    toast_thresh_reset: '↺ Thresholds reset',
+    toast_range_deleted: 'pack(s) deleted',
+    toast_full_reset: '☠ Data cleared',
+    confirm_full_reset: 'Erase ALL data and reset thresholds to defaults?',
+    confirm_delete: 'Delete this pack?',
+    days: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    since_prev: 'since previous',
+    sub_less1h: 'less than an hour',
+    sub_before: (rem, ref) => `${rem}h before your average`,
+    sub_near: (ref) => `almost at your average (${ref}h)`,
+    sub_bravo: '✓ beat your average — well done!',
+  },
+  es: {
+    avg_label: 'CIG / DÍA (PROM. 3 DÍAS)',
+    trend_lbl: 'Tendencia (7d)',
+    pack30_lbl: 'Cajet. / 30d',
+    pack7_lbl: 'Cajet. / 7d',
+    avg7h_lbl: 'prom. 7d',
+    hero_lbl: 'HORAS DESDE EL ÚLTIMO PAQUETE',
+    new_pack: 'NUEVO PAQUETE',
+    history_title: 'HISTORIAL RECIENTE',
+    date_time_lbl: 'FECHA Y HORA',
+    cancel_btn: 'CANCELAR',
+    save_btn: 'GUARDAR',
+    stats_title: 'ESTADÍSTICAS',
+    cig3j: 'Cig/d (3d)',
+    cig30j: 'Cig/d (30d)',
+    h3j: 'H/caj (prom 3d)',
+    h30j: 'H/caj (prom 30d)',
+    chart1_title: 'CIG/DÍA — PROM. 3D',
+    chart2_title: 'INTERVALO ENTRE PAQUETES (horas)',
+    swipe_hint: '← deslizar para navegar →',
+    data_title: 'DATOS',
+    export_btn: '⬇ Exportar (JSON)',
+    import_btn: '⬆ Importar (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'EDITAR PAQUETE',
+    modal_add: 'NUEVO PAQUETE',
+    toast_added: '📦 Paquete añadido',
+    toast_deleted: '🗑 Paquete eliminado',
+    toast_edited: '✓ Guardado',
+    toast_imported: '✓ Datos importados',
+    toast_invalid: '⚠ Archivo inválido',
+    settings_title: 'AJUSTES',
+    s_lang: 'IDIOMA',
+    s_thresholds: 'UMBRALES DE COLOR (cig/día)',
+    s_zone1: 'Dorado  < umbral 1',
+    s_zone2: 'Azul→Verde  ≤ umbral 2',
+    s_zone3: 'Verde→Naranja  ≤ umbral 3',
+    s_zone4: 'Naranja→Rojo  ≤ umbral 4',
+    s_zone5: 'Rojo→Morado  ≤ umbral 5',
+    s_reset_thresh: '↺ Defecto',
+    s_apply: '✓ Aplicar',
+    s_data: 'DATOS',
+    s_delete_range: 'ELIMINAR RANGO DE FECHAS',
+    s_from: 'Desde',
+    s_to: 'Hasta',
+    s_delete_range_btn: '🗑 Eliminar este rango',
+    s_danger: 'ZONA PELIGROSA',
+    s_full_reset: '☠ REINICIO COMPLETO',
+    s_full_reset_hint: 'Borra todos los datos y restaura los umbrales',
+    s_invalid_range: '⚠ Fechas inválidas',
+    s_packs_in_range: 'paquete(s) serán eliminados',
+    s_pick_dates: 'Elige un rango de fechas',
+    toast_thresh_saved: '✓ Umbrales guardados',
+    toast_thresh_reset: '↺ Umbrales reiniciados',
+    toast_range_deleted: 'paquete(s) eliminado(s)',
+    toast_full_reset: '☠ Datos borrados',
+    confirm_full_reset: '¿Borrar TODOS los datos y restaurar umbrales?',
+    confirm_delete: '¿Eliminar este paquete?',
+    days: ['dom','lun','mar','mié','jue','vie','sáb'],
+    months: ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'],
+    since_prev: 'desde el anterior',
+    sub_less1h: 'menos de una hora',
+    sub_before: (rem, ref) => `${rem}h antes de tu promedio`,
+    sub_near: (ref) => `casi en tu promedio (${ref}h)`,
+    sub_bravo: '✓ superaste tu promedio — ¡bravo!',
+  },
+
+  it: {
+    avg_label: 'SIG / GIORNO (MEDIA 3 GG)',
+    trend_lbl: 'Tendenza (7gg)',
+    pack7_lbl: 'Pack / 7gg',
+    pack30_lbl: 'Pack / 30gg',
+    hero_lbl: "ORE DALL'ULTIMO PACCHETTO",
+    avg7h_lbl: 'media 7gg',
+    new_pack: 'NUOVO PACCHETTO',
+    history_title: 'CRONOLOGIA RECENTE',
+    date_time_lbl: 'DATA E ORA',
+    cancel_btn: 'ANNULLA',
+    save_btn: 'SALVA',
+    stats_title: 'STATISTICHE',
+    cig3j: 'Sig/g (3gg)',
+    cig30j: 'Sig/g (30gg)',
+    h3j: 'Ore/pack (media 3gg)',
+    h30j: 'Ore/pack (media 30gg)',
+    chart1_title: 'SIG/GIORNO — MEDIA 3GG',
+    chart2_title: 'INTERVALLO TRA PACCHETTI (ore)',
+    swipe_hint: '← scorri per navigare →',
+    data_title: 'DATI',
+    export_btn: '⬇ Esporta (JSON)',
+    import_btn: '⬆ Importa (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'MODIFICA PACCHETTO',
+    modal_add: 'NUOVO PACCHETTO',
+    toast_added: '📦 Pacchetto aggiunto',
+    toast_deleted: '🗑 Pacchetto eliminato',
+    toast_edited: '✓ Salvato',
+    toast_imported: '✓ Dati importati',
+    toast_invalid: '⚠ File non valido',
+    confirm_delete: 'Eliminare questo pacchetto?',
+    settings_title: 'IMPOSTAZIONI',
+    s_lang: 'LINGUA',
+    s_thresholds: 'SOGLIE COLORE (sig/giorno)',
+    s_zone1: 'Oro  < soglia 1',
+    s_zone2: 'Blu→Verde  ≤ soglia 2',
+    s_zone3: 'Verde→Arancio  ≤ soglia 3',
+    s_zone4: 'Arancio→Rosso  ≤ soglia 4',
+    s_zone5: 'Rosso→Viola  ≤ soglia 5',
+    s_reset_thresh: '↺ Default',
+    s_apply: '✓ Applica',
+    s_data: 'DATI',
+    s_delete_range: 'ELIMINA INTERVALLO DATE',
+    s_from: 'Da',
+    s_to: 'A',
+    s_delete_range_btn: '🗑 Elimina questo intervallo',
+    s_danger: 'ZONA PERICOLOSA',
+    s_full_reset: '☠ RESET COMPLETO',
+    s_full_reset_hint: 'Cancella tutti i dati e ripristina le soglie',
+    s_invalid_range: '⚠ Date non valide',
+    s_packs_in_range: 'pacchetto/i verranno eliminati',
+    s_pick_dates: 'Scegli un intervallo di date',
+    toast_thresh_saved: '✓ Soglie salvate',
+    toast_thresh_reset: '↺ Soglie reimpostate',
+    toast_range_deleted: 'pacchetto/i eliminati',
+    toast_full_reset: '☠ Dati cancellati',
+    confirm_full_reset: 'Cancellare TUTTI i dati e reimpostare le soglie?',
+    days: ['dom','lun','mar','mer','gio','ven','sab'],
+    months: ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'],
+    since_prev: 'dal precedente',
+    sub_less1h: "meno di un'ora",
+    sub_before: (rem, ref) => `ancora ${rem}h alla media`,
+    sub_near: (ref) => `quasi alla media (${ref}h)`,
+    sub_bravo: '✓ superata la media — bravo!',
+  },
+  pt: {
+    avg_label: 'CIG / DIA (MÉDIA 3 DIAS)',
+    trend_lbl: 'Tendência (7d)',
+    pack7_lbl: 'Maços / 7d',
+    pack30_lbl: 'Maços / 30d',
+    hero_lbl: 'HORAS DESDE O ÚLTIMO MAÇO',
+    avg7h_lbl: 'média 7d',
+    new_pack: 'NOVO MAÇO',
+    history_title: 'HISTÓRICO RECENTE',
+    date_time_lbl: 'DATA E HORA',
+    cancel_btn: 'CANCELAR',
+    save_btn: 'SALVAR',
+    stats_title: 'ESTATÍSTICAS',
+    cig3j: 'Cig/d (3d)',
+    cig30j: 'Cig/d (30d)',
+    h3j: 'H/maço (med 3d)',
+    h30j: 'H/maço (med 30d)',
+    chart1_title: 'CIG/DIA — MÉDIA 3D',
+    chart2_title: 'INTERVALO ENTRE MAÇOS (horas)',
+    swipe_hint: '← deslize para navegar →',
+    data_title: 'DADOS',
+    export_btn: '⬇ Exportar (JSON)',
+    import_btn: '⬆ Importar (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'EDITAR MAÇO',
+    modal_add: 'NOVO MAÇO',
+    toast_added: '📦 Maço adicionado',
+    toast_deleted: '🗑 Maço excluído',
+    toast_edited: '✓ Salvo',
+    toast_imported: '✓ Dados importados',
+    toast_invalid: '⚠ Arquivo inválido',
+    confirm_delete: 'Excluir este maço?',
+    settings_title: 'CONFIGURAÇÕES',
+    s_lang: 'IDIOMA',
+    s_thresholds: 'LIMITES DE COR (cig/dia)',
+    s_zone1: 'Ouro  < limite 1',
+    s_zone2: 'Azul→Verde  ≤ limite 2',
+    s_zone3: 'Verde→Laranja  ≤ limite 3',
+    s_zone4: 'Laranja→Vermelho  ≤ limite 4',
+    s_zone5: 'Vermelho→Roxo  ≤ limite 5',
+    s_reset_thresh: '↺ Padrão',
+    s_apply: '✓ Aplicar',
+    s_data: 'DADOS',
+    s_delete_range: 'EXCLUIR INTERVALO DE DATAS',
+    s_from: 'De',
+    s_to: 'Até',
+    s_delete_range_btn: '🗑 Excluir este intervalo',
+    s_danger: 'ZONA DE PERIGO',
+    s_full_reset: '☠ RESET COMPLETO',
+    s_full_reset_hint: 'Apaga todos os dados e restaura os limites padrão',
+    s_invalid_range: '⚠ Datas inválidas',
+    s_packs_in_range: 'maço(s) serão excluídos',
+    s_pick_dates: 'Escolha um intervalo de datas',
+    toast_thresh_saved: '✓ Limites salvos',
+    toast_thresh_reset: '↺ Limites redefinidos',
+    toast_range_deleted: 'maço(s) excluídos',
+    toast_full_reset: '☠ Dados apagados',
+    confirm_full_reset: 'Apagar TODOS os dados e redefinir limites?',
+    days: ['dom','seg','ter','qua','qui','sex','sáb'],
+    months: ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'],
+    since_prev: 'desde o anterior',
+    sub_less1h: 'menos de uma hora',
+    sub_before: (rem, ref) => `${rem}h antes da média`,
+    sub_near: (ref) => `quase na média (${ref}h)`,
+    sub_bravo: '✓ superou sua média — parabéns!',
+  },
+  ru: {
+    avg_label: 'СИГ / ДЕНЬ (СРЕДН. 3 ДНЯ)',
+    trend_lbl: 'Тренд (7д)',
+    pack7_lbl: 'Пач / 7д',
+    pack30_lbl: 'Пач / 30д',
+    hero_lbl: 'ЧАСОВ С ПОСЛЕДНЕЙ ПАЧКИ',
+    avg7h_lbl: 'средн. 7д',
+    new_pack: 'НОВАЯ ПАЧКА',
+    history_title: 'ПОСЛЕДНИЕ ЗАПИСИ',
+    date_time_lbl: 'ДАТА И ВРЕМЯ',
+    cancel_btn: 'ОТМЕНА',
+    save_btn: 'СОХРАНИТЬ',
+    stats_title: 'СТАТИСТИКА',
+    cig3j: 'Сиг/д (3д)',
+    cig30j: 'Сиг/д (30д)',
+    h3j: 'Ч/пач (ср 3д)',
+    h30j: 'Ч/пач (ср 30д)',
+    chart1_title: 'СИГ/ДЕНЬ — СКОЛЬЗ. 3Д',
+    chart2_title: 'ИНТЕРВАЛ МЕЖДУ ПАЧКАМИ (ч)',
+    swipe_hint: '← свайп для навигации →',
+    data_title: 'ДАННЫЕ',
+    export_btn: '⬇ Экспорт (JSON)',
+    import_btn: '⬆ Импорт (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'РЕДАКТИРОВАТЬ',
+    modal_add: 'НОВАЯ ПАЧКА',
+    toast_added: '📦 Пачка добавлена',
+    toast_deleted: '🗑 Пачка удалена',
+    toast_edited: '✓ Сохранено',
+    toast_imported: '✓ Данные импортированы',
+    toast_invalid: '⚠ Неверный файл',
+    confirm_delete: 'Удалить эту пачку?',
+    settings_title: 'НАСТРОЙКИ',
+    s_lang: 'ЯЗЫК',
+    s_thresholds: 'ЦВЕТОВЫЕ ПОРОГИ (сиг/день)',
+    s_zone1: 'Золото  < порог 1',
+    s_zone2: 'Синий→Зелёный  ≤ порог 2',
+    s_zone3: 'Зелёный→Оранж  ≤ порог 3',
+    s_zone4: 'Оранж→Красный  ≤ порог 4',
+    s_zone5: 'Красный→Фиолет  ≤ порог 5',
+    s_reset_thresh: '↺ По умолч.',
+    s_apply: '✓ Применить',
+    s_data: 'ДАННЫЕ',
+    s_delete_range: 'УДАЛИТЬ ДИАПАЗОН ДАТ',
+    s_from: 'С',
+    s_to: 'По',
+    s_delete_range_btn: '🗑 Удалить диапазон',
+    s_danger: 'ОПАСНАЯ ЗОНА',
+    s_full_reset: '☠ ПОЛНЫЙ СБРОС',
+    s_full_reset_hint: 'Удаляет все данные и сбрасывает пороги',
+    s_invalid_range: '⚠ Неверные даты',
+    s_packs_in_range: 'пачек будет удалено',
+    s_pick_dates: 'Выберите диапазон дат',
+    toast_thresh_saved: '✓ Пороги сохранены',
+    toast_thresh_reset: '↺ Пороги сброшены',
+    toast_range_deleted: 'пачек удалено',
+    toast_full_reset: '☠ Данные удалены',
+    confirm_full_reset: 'Удалить ВСЕ данные и сбросить пороги?',
+    days: ['вс','пн','вт','ср','чт','пт','сб'],
+    months: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
+    since_prev: 'с предыдущей',
+    sub_less1h: 'менее часа',
+    sub_before: (rem, ref) => `ещё ${rem}ч до среднего`,
+    sub_near: (ref) => `почти среднее (${ref}ч)`,
+    sub_bravo: '✓ превысили среднее — отлично!',
+  },
+  zh: {
+    avg_label: '烟支/天（3天均值）',
+    trend_lbl: '趋势（7天）',
+    pack7_lbl: '包 / 7天',
+    pack30_lbl: '包 / 30天',
+    hero_lbl: '距上次开包的小时数',
+    avg7h_lbl: '7天均值',
+    new_pack: '新包',
+    history_title: '最近记录',
+    date_time_lbl: '日期与时间',
+    cancel_btn: '取消',
+    save_btn: '保存',
+    stats_title: '统计',
+    cig3j: '支/天（3天）',
+    cig30j: '支/天（30天）',
+    h3j: '小时/包（3天均）',
+    h30j: '小时/包（30天均）',
+    chart1_title: '支/天 — 3天滚动均值',
+    chart2_title: '包间隔时间（小时）',
+    swipe_hint: '← 滑动浏览 →',
+    data_title: '数据',
+    export_btn: '⬇ 导出 (JSON)',
+    import_btn: '⬆ 导入 (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: '编辑记录',
+    modal_add: '新包',
+    toast_added: '📦 已添加',
+    toast_deleted: '🗑 已删除',
+    toast_edited: '✓ 已保存',
+    toast_imported: '✓ 数据已导入',
+    toast_invalid: '⚠ 文件无效',
+    confirm_delete: '删除这包记录？',
+    settings_title: '设置',
+    s_lang: '语言',
+    s_thresholds: '颜色阈值（支/天）',
+    s_zone1: '金色  < 阈值1',
+    s_zone2: '蓝→绿  ≤ 阈值2',
+    s_zone3: '绿→橙  ≤ 阈值3',
+    s_zone4: '橙→红  ≤ 阈值4',
+    s_zone5: '红→紫  ≤ 阈值5',
+    s_reset_thresh: '↺ 默认',
+    s_apply: '✓ 应用',
+    s_data: '数据',
+    s_delete_range: '删除日期范围',
+    s_from: '从',
+    s_to: '至',
+    s_delete_range_btn: '🗑 删除此范围',
+    s_danger: '危险区',
+    s_full_reset: '☠ 完全重置',
+    s_full_reset_hint: '清除所有数据并恢复默认阈值',
+    s_invalid_range: '⚠ 日期无效',
+    s_packs_in_range: '包将被删除',
+    s_pick_dates: '请选择日期范围',
+    toast_thresh_saved: '✓ 阈值已保存',
+    toast_thresh_reset: '↺ 阈值已重置',
+    toast_range_deleted: '包已删除',
+    toast_full_reset: '☠ 数据已清除',
+    confirm_full_reset: '清除所有数据并重置阈值？',
+    days: ['日','一','二','三','四','五','六'],
+    months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+    since_prev: '距上次',
+    sub_less1h: '不足一小时',
+    sub_before: (rem, ref) => `还有${rem}小时到均值`,
+    sub_near: (ref) => `接近均值（${ref}小时）`,
+    sub_bravo: '✓ 超过均值 — 很好！',
+  },
+  hi: {
+    avg_label: 'सिग / दिन (3 दिन औसत)',
+    trend_lbl: 'रुझान (7दिन)',
+    pack7_lbl: 'पैक / 7दिन',
+    pack30_lbl: 'पैक / 30दिन',
+    hero_lbl: 'अंतिम पैक के बाद घंटे',
+    avg7h_lbl: '7दिन औसत',
+    new_pack: 'नया पैक',
+    history_title: 'हालिया इतिहास',
+    date_time_lbl: 'दिनांक और समय',
+    cancel_btn: 'रद्द करें',
+    save_btn: 'सहेजें',
+    stats_title: 'सांख्यिकी',
+    cig3j: 'सिग/दिन (3दिन)',
+    cig30j: 'सिग/दिन (30दिन)',
+    h3j: 'घं/पैक (3दिन)',
+    h30j: 'घं/पैक (30दिन)',
+    chart1_title: 'सिग/दिन — 3दिन रोलिंग',
+    chart2_title: 'पैक के बीच अंतराल (घंटे)',
+    swipe_hint: '← नेविगेट करने के लिए स्वाइप करें →',
+    data_title: 'डेटा',
+    export_btn: '⬇ निर्यात (JSON)',
+    import_btn: '⬆ आयात (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'पैक संपादित करें',
+    modal_add: 'नया पैक',
+    toast_added: '📦 पैक जोड़ा गया',
+    toast_deleted: '🗑 पैक हटाया गया',
+    toast_edited: '✓ सहेजा गया',
+    toast_imported: '✓ डेटा आयात हुआ',
+    toast_invalid: '⚠ अमान्य फ़ाइल',
+    confirm_delete: 'इस पैक को हटाएं?',
+    settings_title: 'सेटिंग्स',
+    s_lang: 'भाषा',
+    s_thresholds: 'रंग सीमाएं (सिग/दिन)',
+    s_zone1: 'सोना  < सीमा 1',
+    s_zone2: 'नीला→हरा  ≤ सीमा 2',
+    s_zone3: 'हरा→नारंगी  ≤ सीमा 3',
+    s_zone4: 'नारंगी→लाल  ≤ सीमा 4',
+    s_zone5: 'लाल→बैंगनी  ≤ सीमा 5',
+    s_reset_thresh: '↺ डिफ़ॉल्ट',
+    s_apply: '✓ लागू करें',
+    s_data: 'डेटा',
+    s_delete_range: 'तिथि सीमा हटाएं',
+    s_from: 'से',
+    s_to: 'तक',
+    s_delete_range_btn: '🗑 यह सीमा हटाएं',
+    s_danger: 'खतरे का क्षेत्र',
+    s_full_reset: '☠ पूर्ण रीसेट',
+    s_full_reset_hint: 'सभी डेटा मिटाएं और डिफ़ॉल्ट सीमाएं पुनर्स्थापित करें',
+    s_invalid_range: '⚠ अमान्य तिथियां',
+    s_packs_in_range: 'पैक हटाए जाएंगे',
+    s_pick_dates: 'कृपया तिथि सीमा चुनें',
+    toast_thresh_saved: '✓ सीमाएं सहेजी गईं',
+    toast_thresh_reset: '↺ सीमाएं रीसेट हुईं',
+    toast_range_deleted: 'पैक हटाए गए',
+    toast_full_reset: '☠ डेटा मिटाया गया',
+    confirm_full_reset: 'सभी डेटा मिटाएं और सीमाएं रीसेट करें?',
+    days: ['रवि','सोम','मंगल','बुध','गुरु','शुक्र','शनि'],
+    months: ['जन','फर','मार','अप्र','मई','जून','जुल','अग','सित','अक्त','नव','दिस'],
+    since_prev: 'पिछले के बाद',
+    sub_less1h: 'एक घंटे से कम',
+    sub_before: (rem, ref) => `औसत से ${rem}घं पहले`,
+    sub_near: (ref) => `औसत के करीब (${ref}घं)`,
+    sub_bravo: '✓ औसत पार किया — शाबाश!',
+  },
+  vi: {
+    avg_label: 'ĐIẾU / NGÀY (TB 3 NGÀY)',
+    trend_lbl: 'Xu hướng (7ng)',
+    pack7_lbl: 'Gói / 7ng',
+    pack30_lbl: 'Gói / 30ng',
+    hero_lbl: 'GIỜ KỂ TỪ GÓI CUỐI',
+    avg7h_lbl: 'tb 7 ngày',
+    new_pack: 'GÓI MỚI',
+    history_title: 'LỊCH SỬ GẦN ĐÂY',
+    date_time_lbl: 'NGÀY VÀ GIỜ',
+    cancel_btn: 'HỦY',
+    save_btn: 'LƯU',
+    stats_title: 'THỐNG KÊ',
+    cig3j: 'Điếu/ng (3ng)',
+    cig30j: 'Điếu/ng (30ng)',
+    h3j: 'Giờ/gói (tb 3ng)',
+    h30j: 'Giờ/gói (tb 30ng)',
+    chart1_title: 'ĐIẾU/NGÀY — TB 3 NGÀY',
+    chart2_title: 'KHOẢNG CÁCH GIỮA CÁC GÓI (giờ)',
+    swipe_hint: '← vuốt để điều hướng →',
+    data_title: 'DỮ LIỆU',
+    export_btn: '⬇ Xuất (JSON)',
+    import_btn: '⬆ Nhập (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'SỬA GÓI',
+    modal_add: 'GÓI MỚI',
+    toast_added: '📦 Đã thêm gói',
+    toast_deleted: '🗑 Đã xóa gói',
+    toast_edited: '✓ Đã lưu',
+    toast_imported: '✓ Đã nhập dữ liệu',
+    toast_invalid: '⚠ Tệp không hợp lệ',
+    confirm_delete: 'Xóa gói này?',
+    settings_title: 'CÀI ĐẶT',
+    s_lang: 'NGÔN NGỮ',
+    s_thresholds: 'NGƯỠNG MÀU (điếu/ngày)',
+    s_zone1: 'Vàng  < ngưỡng 1',
+    s_zone2: 'Xanh dương→Xanh lá  ≤ ngưỡng 2',
+    s_zone3: 'Xanh lá→Cam  ≤ ngưỡng 3',
+    s_zone4: 'Cam→Đỏ  ≤ ngưỡng 4',
+    s_zone5: 'Đỏ→Tím  ≤ ngưỡng 5',
+    s_reset_thresh: '↺ Mặc định',
+    s_apply: '✓ Áp dụng',
+    s_data: 'DỮ LIỆU',
+    s_delete_range: 'XÓA KHOẢNG NGÀY',
+    s_from: 'Từ',
+    s_to: 'Đến',
+    s_delete_range_btn: '🗑 Xóa khoảng này',
+    s_danger: 'VÙNG NGUY HIỂM',
+    s_full_reset: '☠ ĐẶT LẠI HOÀN TOÀN',
+    s_full_reset_hint: 'Xóa tất cả dữ liệu và khôi phục ngưỡng mặc định',
+    s_invalid_range: '⚠ Ngày không hợp lệ',
+    s_packs_in_range: 'gói sẽ bị xóa',
+    s_pick_dates: 'Vui lòng chọn khoảng ngày',
+    toast_thresh_saved: '✓ Đã lưu ngưỡng',
+    toast_thresh_reset: '↺ Đã đặt lại ngưỡng',
+    toast_range_deleted: 'gói đã xóa',
+    toast_full_reset: '☠ Đã xóa dữ liệu',
+    confirm_full_reset: 'Xóa TẤT CẢ dữ liệu và đặt lại ngưỡng?',
+    days: ['CN','T2','T3','T4','T5','T6','T7'],
+    months: ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'],
+    since_prev: 'kể từ gói trước',
+    sub_less1h: 'chưa đến một giờ',
+    sub_before: (rem, ref) => `còn ${rem}g trước mức trung bình`,
+    sub_near: (ref) => `gần mức trung bình (${ref}g)`,
+    sub_bravo: '✓ vượt mức trung bình — xuất sắc!',
+  },
+  th: {
+    avg_label: 'มวน/วัน (เฉลี่ย 3 วัน)',
+    trend_lbl: 'แนวโน้ม (7ว)',
+    pack7_lbl: 'ซอง / 7ว',
+    pack30_lbl: 'ซอง / 30ว',
+    hero_lbl: 'ชั่วโมงนับจากซองล่าสุด',
+    avg7h_lbl: 'เฉลี่ย 7ว',
+    new_pack: 'ซองใหม่',
+    history_title: 'ประวัติล่าสุด',
+    date_time_lbl: 'วันที่และเวลา',
+    cancel_btn: 'ยกเลิก',
+    save_btn: 'บันทึก',
+    stats_title: 'สถิติ',
+    cig3j: 'มวน/ว (3ว)',
+    cig30j: 'มวน/ว (30ว)',
+    h3j: 'ชม/ซอง (เฉลี่ย 3ว)',
+    h30j: 'ชม/ซอง (เฉลี่ย 30ว)',
+    chart1_title: 'มวน/วัน — เฉลี่ยเคลื่อนที่ 3ว',
+    chart2_title: 'ช่วงเวลาระหว่างซอง (ชั่วโมง)',
+    swipe_hint: '← เลื่อนเพื่อนำทาง →',
+    data_title: 'ข้อมูล',
+    export_btn: '⬇ ส่งออก (JSON)',
+    import_btn: '⬆ นำเข้า (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'แก้ไขซอง',
+    modal_add: 'ซองใหม่',
+    toast_added: '📦 เพิ่มซองแล้ว',
+    toast_deleted: '🗑 ลบซองแล้ว',
+    toast_edited: '✓ บันทึกแล้ว',
+    toast_imported: '✓ นำเข้าข้อมูลแล้ว',
+    toast_invalid: '⚠ ไฟล์ไม่ถูกต้อง',
+    confirm_delete: 'ลบซองนี้?',
+    settings_title: 'ตั้งค่า',
+    s_lang: 'ภาษา',
+    s_thresholds: 'ค่าเกณฑ์สี (มวน/วัน)',
+    s_zone1: 'ทอง  < เกณฑ์ 1',
+    s_zone2: 'ฟ้า→เขียว  ≤ เกณฑ์ 2',
+    s_zone3: 'เขียว→ส้ม  ≤ เกณฑ์ 3',
+    s_zone4: 'ส้ม→แดง  ≤ เกณฑ์ 4',
+    s_zone5: 'แดง→ม่วง  ≤ เกณฑ์ 5',
+    s_reset_thresh: '↺ ค่าเริ่มต้น',
+    s_apply: '✓ นำไปใช้',
+    s_data: 'ข้อมูล',
+    s_delete_range: 'ลบช่วงวันที่',
+    s_from: 'จาก',
+    s_to: 'ถึง',
+    s_delete_range_btn: '🗑 ลบช่วงนี้',
+    s_danger: 'โซนอันตราย',
+    s_full_reset: '☠ รีเซ็ตทั้งหมด',
+    s_full_reset_hint: 'ลบข้อมูลทั้งหมดและคืนค่าเกณฑ์เริ่มต้น',
+    s_invalid_range: '⚠ วันที่ไม่ถูกต้อง',
+    s_packs_in_range: 'ซองจะถูกลบ',
+    s_pick_dates: 'กรุณาเลือกช่วงวันที่',
+    toast_thresh_saved: '✓ บันทึกค่าเกณฑ์แล้ว',
+    toast_thresh_reset: '↺ รีเซ็ตค่าเกณฑ์แล้ว',
+    toast_range_deleted: 'ซองถูกลบ',
+    toast_full_reset: '☠ ล้างข้อมูลแล้ว',
+    confirm_full_reset: 'ลบข้อมูลทั้งหมดและรีเซ็ตค่าเกณฑ์?',
+    days: ['อา','จ','อ','พ','พฤ','ศ','ส'],
+    months: ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'],
+    since_prev: 'ตั้งแต่ซองก่อน',
+    sub_less1h: 'ไม่ถึงหนึ่งชั่วโมง',
+    sub_before: (rem, ref) => `อีก ${rem}ชม ถึงค่าเฉลี่ย`,
+    sub_near: (ref) => `ใกล้ค่าเฉลี่ย (${ref}ชม)`,
+    sub_bravo: '✓ เกินค่าเฉลี่ย — ยอดเยี่ยม!',
+  },
+  km: {
+    avg_label: 'ក្តាប់/ថ្ងៃ (មធ្យម ៣ ថ្ងៃ)',
+    trend_lbl: 'និន្នាការ (7ថ)',
+    pack7_lbl: 'កញ្ចប់ / 7ថ',
+    pack30_lbl: 'កញ្ចប់ / 30ថ',
+    hero_lbl: 'ម៉ោងចាប់តាំងពីកញ្ចប់ចុងក្រោយ',
+    avg7h_lbl: 'មធ្យម 7ថ',
+    new_pack: 'កញ្ចប់ថ្មី',
+    history_title: 'ប្រវត្តិថ្មីៗ',
+    date_time_lbl: 'កាលបរិច្ឆេទ និងម៉ោង',
+    cancel_btn: 'បោះបង់',
+    save_btn: 'រក្សាទុក',
+    stats_title: 'ស្ថិតិ',
+    cig3j: 'ក្តាប់/ថ (3ថ)',
+    cig30j: 'ក្តាប់/ថ (30ថ)',
+    h3j: 'ម៉ោង/កញ្ចប់ (3ថ)',
+    h30j: 'ម៉ោង/កញ្ចប់ (30ថ)',
+    chart1_title: 'ក្តាប់/ថ្ងៃ — មធ្យម ៣ ថ្ងៃ',
+    chart2_title: 'ចន្លោះពេលរវាងកញ្ចប់ (ម៉ោង)',
+    swipe_hint: '← អូសដើម្បីរុករក →',
+    data_title: 'ទិន្នន័យ',
+    export_btn: '⬇ នាំចេញ (JSON)',
+    import_btn: '⬆ នាំចូល (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'កែប្រែកញ្ចប់',
+    modal_add: 'កញ្ចប់ថ្មី',
+    toast_added: '📦 បានបន្ថែមកញ្ចប់',
+    toast_deleted: '🗑 បានលុបកញ្ចប់',
+    toast_edited: '✓ បានរក្សាទុក',
+    toast_imported: '✓ បាននាំចូលទិន្នន័យ',
+    toast_invalid: '⚠ ឯកសារមិនត្រឹមត្រូវ',
+    confirm_delete: 'លុបកញ្ចប់នេះ?',
+    settings_title: 'ការកំណត់',
+    s_lang: 'ភាសា',
+    s_thresholds: 'កំហិតពណ៌ (ក្តាប់/ថ្ងៃ)',
+    s_zone1: 'មាស  < កំហិត 1',
+    s_zone2: 'ខៀវ→បៃតង  ≤ កំហិត 2',
+    s_zone3: 'បៃតង→ទឹកក្រូច  ≤ កំហិត 3',
+    s_zone4: 'ទឹកក្រូច→ក្រហម  ≤ កំហិត 4',
+    s_zone5: 'ក្រហម→ស្វាយ  ≤ កំហិត 5',
+    s_reset_thresh: '↺ លំនាំដើម',
+    s_apply: '✓ អនុវត្ត',
+    s_data: 'ទិន្នន័យ',
+    s_delete_range: 'លុបជួរកាលបរិច្ឆេទ',
+    s_from: 'ពី',
+    s_to: 'ដល់',
+    s_delete_range_btn: '🗑 លុបជួរនេះ',
+    s_danger: 'តំបន់គ្រោះថ្នាក់',
+    s_full_reset: '☠ កំណត់ឡើងវិញទាំងស្រុង',
+    s_full_reset_hint: 'លុបទិន្នន័យទាំងអស់ និងស្ដារកំហិតដើម',
+    s_invalid_range: '⚠ កាលបរិច្ឆេទមិនត្រឹមត្រូវ',
+    s_packs_in_range: 'កញ្ចប់នឹងត្រូវបានលុប',
+    s_pick_dates: 'សូមជ្រើសរើសជួរកាលបរិច្ឆេទ',
+    toast_thresh_saved: '✓ បានរក្សាទុកកំហិត',
+    toast_thresh_reset: '↺ បានកំណត់កំហិតឡើងវិញ',
+    toast_range_deleted: 'កញ្ចប់ត្រូវបានលុប',
+    toast_full_reset: '☠ ទិន្នន័យត្រូវបានលុប',
+    confirm_full_reset: 'លុបទិន្នន័យទាំងអស់ និងកំណត់ឡើងវិញ?',
+    days: ['អា','ច','អ','ព','ព្រ','សុ','ស'],
+    months: ['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'],
+    since_prev: 'ចាប់ពីមុន',
+    sub_less1h: 'តិចជាងមួយម៉ោង',
+    sub_before: (rem, ref) => `នៅមាន ${rem} ម៉ោង មុនមធ្យម`,
+    sub_near: (ref) => `ជិតដល់មធ្យម (${ref}ម៉ោង)`,
+    sub_bravo: '✓ លើសមធ្យម — ល្អណាស់!',
+  },
+  de: {
+    avg_label: 'ZIG / TAG (3-TAGE-DURCHSCHN.)',
+    trend_lbl: 'Trend (7T)',
+    pack30_lbl: 'Pack. / 30T',
+    pack7_lbl: 'Pack. / 7T',
+    avg7h_lbl: 'Ø 7T',
+    hero_lbl: 'STUNDEN SEIT LETZTER PACKUNG',
+    new_pack: 'NEUE PACKUNG',
+    history_title: 'LETZTE EINTRÄGE',
+    date_time_lbl: 'DATUM & UHRZEIT',
+    cancel_btn: 'ABBRECHEN',
+    save_btn: 'SPEICHERN',
+    stats_title: 'STATISTIKEN',
+    cig3j: 'Zig/T (3T)',
+    cig30j: 'Zig/T (30T)',
+    h3j: 'Std/Pack (3T)',
+    h30j: 'Std/Pack (30T)',
+    chart1_title: 'ZIG/TAG — 3T-ROLLEND',
+    chart2_title: 'ABSTAND ZWISCHEN PACKUNGEN (Std)',
+    swipe_hint: '← wischen zum Navigieren →',
+    data_title: 'DATEN',
+    export_btn: '⬇ Exportieren (JSON)',
+    import_btn: '⬆ Importieren (JSON)',
+    stats_btn: 'STATS ▸',
+    modal_edit: 'EINTRAG BEARBEITEN',
+    modal_add: 'NEUE PACKUNG',
+    toast_added: '📦 Packung hinzugefügt',
+    toast_deleted: '🗑 Packung gelöscht',
+    toast_edited: '✓ Gespeichert',
+    toast_imported: '✓ Daten importiert',
+    toast_invalid: '⚠ Ungültige Datei',
+    settings_title: 'EINSTELLUNGEN',
+    s_lang: 'SPRACHE',
+    s_thresholds: 'FARBSCHWELLEN (Zig/Tag)',
+    s_zone1: 'Gold  < Schwelle 1',
+    s_zone2: 'Blau→Grün  ≤ Schwelle 2',
+    s_zone3: 'Grün→Orange  ≤ Schwelle 3',
+    s_zone4: 'Orange→Rot  ≤ Schwelle 4',
+    s_zone5: 'Rot→Lila  ≤ Schwelle 5',
+    s_reset_thresh: '↺ Standard',
+    s_apply: '✓ Anwenden',
+    s_data: 'DATEN',
+    s_delete_range: 'DATUMSBEREICH LÖSCHEN',
+    s_from: 'Von',
+    s_to: 'Bis',
+    s_delete_range_btn: '🗑 Diesen Bereich löschen',
+    s_danger: 'GEFAHRENZONE',
+    s_full_reset: '☠ VOLLSTÄNDIGER RESET',
+    s_full_reset_hint: 'Löscht alle Daten und stellt Standardschwellen wieder her',
+    s_invalid_range: '⚠ Ungültige Daten',
+    s_packs_in_range: 'Packung(en) werden gelöscht',
+    s_pick_dates: 'Bitte Datumsbereich wählen',
+    toast_thresh_saved: '✓ Schwellen gespeichert',
+    toast_thresh_reset: '↺ Schwellen zurückgesetzt',
+    toast_range_deleted: 'Packung(en) gelöscht',
+    toast_full_reset: '☠ Daten gelöscht',
+    confirm_full_reset: 'ALLE Daten löschen und Schwellen zurücksetzen?',
+    confirm_delete: 'Diesen Eintrag löschen?',
+    days: ['So','Mo','Di','Mi','Do','Fr','Sa'],
+    months: ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'],
+    since_prev: 'seit vorheriger',
+    sub_less1h: 'weniger als eine Stunde',
+    sub_before: (rem, ref) => `noch ${rem}h bis zum Durchschnitt`,
+    sub_near: (ref) => `fast beim Durchschnitt (${ref}h)`,
+    sub_bravo: '✓ Durchschnitt übertroffen — Bravo!',
+  }
+};
+
+let currentLang = 'fr';
+
+function detectLang() {
+  const saved = localStorage.getItem('cigtracker_lang');
+  if (saved && TRANSLATIONS[saved]) return saved;
+  const nav = (navigator.language || navigator.userLanguage || 'fr').slice(0,2).toLowerCase();
+  // Map some navigator codes
+  const codeMap = { 'zh': 'zh', 'hi': 'hi', 'vi': 'vi', 'th': 'th', 'km': 'km', 'ru': 'ru', 'it': 'it', 'pt': 'pt' };
+  const mapped = codeMap[nav] || nav;
+  return TRANSLATIONS[mapped] ? mapped : 'fr';
+}
+
+function setLang(lang) {
+  if (!TRANSLATIONS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('cigtracker_lang', lang);
+  // Update flag buttons
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('lbtn-' + lang);
+  if (btn) btn.classList.add('active');
+  // Apply all static translations
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (TRANSLATIONS[lang][key]) el.textContent = TRANSLATIONS[lang][key];
+  });
+  // Stats button (separate ID)
+  document.getElementById('statsBtn2').textContent = TRANSLATIONS[lang].stats_btn;
+  // Lang tiles in settings
+  updateLangTiles();
+  // Re-render list (dates localised) and update dynamic texts
+  update();
+}
+
+function t(key, ...args) {
+  const val = TRANSLATIONS[currentLang][key];
+  if (typeof val === 'function') return val(...args);
+  return val || key;
+}
+
+// ===================== DATA =====================
+const STORE_KEY = 'cigtracker_v3';
+const THRESH_KEY = 'cigtracker_thresh';
+const DEFAULT_THRESHOLDS = { t1: 10, t2: 15, t3: 20, t4: 30, t5: 40 };
+let thresholds = { ...DEFAULT_THRESHOLDS };
+let packs = []; // [{id, ts}] ts = timestamp ms
+let editingId = null;
+
+function load() {
+  try {
+    const d = localStorage.getItem(STORE_KEY);
+    if (d) packs = JSON.parse(d);
+  } catch(e) {}
+  try {
+    const th = localStorage.getItem(THRESH_KEY);
+    if (th) thresholds = { ...DEFAULT_THRESHOLDS, ...JSON.parse(th) };
+  } catch(e) {}
+  // Demo seed: 11 entries Feb 9-20 2026
+  // prev week (Feb 9-14): 6 packs, this week (Feb 16-20): 5 packs → trend ≈ -17%
+  if (packs.length === 0) {
+    packs = [{"id":1770624000000,"ts":1770624000000},{"id":1770715800001,"ts":1770715800000},{"id":1770796800002,"ts":1770796800000},{"id":1770890400003,"ts":1770890400000},{"id":1770973200004,"ts":1770973200000},{"id":1771066800005,"ts":1771066800000},{"id":1771228800006,"ts":1771228800000},{"id":1771322400007,"ts":1771322400000},{"id":1771405200008,"ts":1771405200000},{"id":1771498800009,"ts":1771498800000},{"id":1771579800010,"ts":1771579800000}];
+    save();
+  }
+}
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(packs));
+}
+
+// ===================== CALCULATIONS =====================
+// Helper: cig/day from avg hours between packs
+// = 20 cig per pack / avg hours between packs * 24h
+// This is immune to "last pack not yet finished" bias
+function cigPerDayFromInterval(avgH) {
+  if (avgH <= 0) return 0;
+  return 20 / avgH * 24;
+}
+
+// Helper: avg cig/day over a window using real elapsed time (used for TREND only)
+function avgCigPerDay(packsInWindow, windowHours, windowEnd) {
+  if (packsInWindow.length === 0) return 0;
+  const firstTs = packsInWindow[0].ts;
+  const windowStart = windowEnd - windowHours * 3600000;
+  const elapsedH = (windowEnd - Math.max(firstTs, windowStart)) / 3600000;
+  const divisorDays = Math.max(elapsedH, 1) / 24;
+  return (packsInWindow.length * 20) / divisorDays;
+}
+
+// Helper: avg hours between consecutive packs in a list
+function avgHoursBetween(packList, fallbackList) {
+  if (packList.length > 1) {
+    let total = 0;
+    for (let i = 1; i < packList.length; i++)
+      total += (packList[i].ts - packList[i-1].ts) / 3600000;
+    return total / (packList.length - 1);
+  }
+  // Only 1 pack in window: use gap to the previous pack outside window
+  if (packList.length === 1 && fallbackList) {
+    const idx = fallbackList.findIndex(p => p.ts === packList[0].ts);
+    if (idx > 0) return (packList[0].ts - fallbackList[idx-1].ts) / 3600000;
+  }
+  return 0;
+}
+
+function calcStats() {
+  if (packs.length === 0) return { avg3: 0, avg30: 0, avgH3: 0, avgH30: 0, avgH7: 0, ppm7: 0, hoursSinceLast: 0, total: 0, trendPct: 0, trendDir: 0, trendValid: false, refH: 24 };
+  const sorted = [...packs].sort((a,b) => a.ts - b.ts);
+  const now = Date.now();
+
+  // Window cutoffs (pure timestamps, no calendar rounding)
+  const cut3  = now - 3  * 24 * 3600000;
+  const cut7  = now - 7  * 24 * 3600000;
+  const cut14 = now - 14 * 24 * 3600000;
+  const cut30 = now - 30 * 24 * 3600000;
+
+  const packs3  = sorted.filter(p => p.ts > cut3);
+  const packs7d = sorted.filter(p => p.ts > cut7);
+  const packs30 = sorted.filter(p => p.ts > cut30);
+
+  // Cig/day averages — derived from avg interval between packs (unbiased by last open pack)
+  // Computed after avgH calculations below, placeholder here
+  let avg3 = 0, avg30 = 0;
+
+  // Avg hours between packs
+  const avgH3  = avgHoursBetween(packs3,  sorted);
+  const avgH30 = avgHoursBetween(packs30, sorted);
+  const avgH7  = avgHoursBetween(packs7d, sorted);
+
+  // Cig/day from interval (stable — not affected by last open pack)
+  // Fallback chain: use narrowest window with enough data, widen if needed
+  avg3  = avgH3  > 0 ? cigPerDayFromInterval(avgH3)
+        : avgH7  > 0 ? cigPerDayFromInterval(avgH7)
+        : avgH30 > 0 ? cigPerDayFromInterval(avgH30) : 0;
+  avg30 = avgH30 > 0 ? cigPerDayFromInterval(avgH30)
+        : avgH7  > 0 ? cigPerDayFromInterval(avgH7)
+        : avgH3  > 0 ? cigPerDayFromInterval(avgH3)  : 0;
+
+  // Hours since last pack
+  const lastTs = sorted[sorted.length - 1].ts;
+  const hoursSinceLast = (now - lastTs) / 3600000;
+
+  // Trend: compare cig/day rate this 7d vs prev 7d (both using real elapsed time)
+  const prevWeek = sorted.filter(p => p.ts > cut14 && p.ts <= cut7);
+  const avgRateThis = avgCigPerDay(packs7d, 168, now);
+  const avgRatePrev = avgCigPerDay(prevWeek, 168, cut7); // prev window ends at cut7
+  let trendPct = 0, trendDir = 0, trendValid = false;
+  if (prevWeek.length > 0 && avgRatePrev > 0) {
+    trendPct = Math.round((avgRateThis - avgRatePrev) / avgRatePrev * 100);
+    trendDir = trendPct > 2 ? 1 : trendPct < -2 ? -1 : 0;
+    trendValid = true;
+  }
+
+  // ppm7 = exact pack count in last 7 days (168h rolling, pure timestamp)
+  const ppm7 = packs7d.length;
+
+  // refH for progress bar
+  const refH = avgH7 > 0 ? avgH7 : avgH3 > 0 ? avgH3 : 24;
+
+  return { avg3, avg30, avgH3, avgH30, avgH7, ppm7, hoursSinceLast, total: sorted.length, trendPct, trendDir, trendValid, refH };
+}
+
+// Lerp between two hex colors by t (0..1)
+function lerpColor(a, b, lr) {
+  const ah = parseInt(a.slice(1),16), bh = parseInt(b.slice(1),16);
+  const ar = ah>>16, ag = (ah>>8)&0xff, ab = ah&0xff;
+  const br = bh>>16, bg = (bh>>8)&0xff, bb = bh&0xff;
+  const rr = Math.round(ar + (br-ar)*lr);
+  const rg = Math.round(ag + (bg-ag)*lr);
+  const rb = Math.round(ab + (bb-ab)*lr);
+  return '#'+[rr,rg,rb].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function applyTheme(avg3) {
+  const { t1, t2, t3, t4, t5 } = thresholds;
+  let accent, bg1, bg2;
+  if (avg3 < t1) {
+    const shimmer = 0.5 + 0.5 * Math.sin(Date.now() / 1200);
+    accent = lerpColor('#ffd700', '#ffb300', shimmer * 0.3);
+    bg1 = '#1a1200'; bg2 = '#2a1e00';
+  } else if (avg3 <= t2) {
+    const lr = (avg3 - t1) / Math.max(1, t2 - t1);
+    accent = lerpColor('#56cfe1', '#52b788', lr);
+    bg1 = lerpColor('#001a2e', '#001a12', lr);
+    bg2 = lerpColor('#00122e', '#001a12', lr);
+  } else if (avg3 <= t3) {
+    const lr = (avg3 - t2) / Math.max(1, t3 - t2);
+    accent = lerpColor('#52b788', '#ff9800', lr);
+    bg1 = lerpColor('#001a12', '#1a0800', lr);
+    bg2 = lerpColor('#001a12', '#2a1000', lr);
+  } else if (avg3 <= t4) {
+    const lr = (avg3 - t3) / Math.max(1, t4 - t3);
+    accent = lerpColor('#ff9800', '#ff2222', lr);
+    bg1 = lerpColor('#1a0800', '#1a0000', lr);
+    bg2 = lerpColor('#2a1000', '#2a0000', lr);
+  } else if (avg3 <= t5) {
+    const lr = (avg3 - t4) / Math.max(1, t5 - t4);
+    accent = lerpColor('#ff2222', '#7b00d4', lr);
+    bg1 = lerpColor('#1a0000', '#0d001a', lr);
+    bg2 = lerpColor('#2a0000', '#1a0030', lr);
+  } else {
+    accent = '#7b00d4';
+    bg1 = '#0d001a'; bg2 = '#1a0030';
+  }
+
+  document.documentElement.style.setProperty('--accent', accent);
+  document.querySelector('.bg-layer').style.background =
+    `linear-gradient(135deg, ${bg1} 0%, ${bg2} 60%, ${bg1} 100%)`;
+}
+
+// ===================== UI UPDATE =====================
+function update() {
+  const stats = calcStats();
+  const { avg3, avg30, avgH3, avgH30, avgH7, ppm7, hoursSinceLast, total, trendPct, trendDir, trendValid, refH } = stats;
+
+  document.getElementById('avgNumber').textContent = avg3 > 0 ? avg3.toFixed(1) : '–';
+  document.getElementById('statPPM').textContent = ppm7 > 0 ? ppm7 : '–';
+
+  // Tendance: ↓ = vert (bonne réduction), = = orange, ↑ = rouge (augmentation)
+  const trendEl = document.getElementById('statTrend');
+  if (!trendValid) {
+    trendEl.textContent = '–';
+    trendEl.className = 'val trend-stable';
+  } else if (trendDir === -1) {
+    trendEl.textContent = '↓ ' + trendPct + '%';
+    trendEl.className = 'val trend-good';
+  } else if (trendDir === 1) {
+    trendEl.textContent = '↑ +' + trendPct + '%';
+    trendEl.className = 'val trend-bad';
+  } else {
+    trendEl.textContent = '= ' + (trendPct >= 0 ? '+' : '') + trendPct + '%';
+    trendEl.className = 'val trend-stable';
+  }
+
+  // Hero — heures depuis dernier paquet + avg 7j
+  const avgH7El = document.getElementById('heroAvgH7');
+  if (avgH7El) avgH7El.textContent = avgH7 > 0 ? avgH7.toFixed(1) : '–';
+  const hEl = document.getElementById('statLast');
+  hEl.textContent = total > 0 ? hoursSinceLast.toFixed(1) : '–';
+
+  // Progress bar: 0% = just opened, 100% = at average interval (or 24h max)
+  const barRef = Math.max(refH, 4); // ref = avgH7 if available
+  const barPct = total > 0 ? Math.min(100, (hoursSinceLast / barRef) * 100) : 0;
+  document.getElementById('heroBar').style.width = barPct + '%';
+
+  // Sublabel: time-based encouragement
+  const subEl = document.getElementById('heroSublabel');
+  if (total > 0) {
+    if (hoursSinceLast < 1) subEl.textContent = t('sub_less1h');
+    else if (barPct < 50) subEl.textContent = t('sub_before', (barRef - hoursSinceLast).toFixed(1), barRef.toFixed(1));
+    else if (barPct < 100) subEl.textContent = t('sub_near', barRef.toFixed(1));
+    else subEl.textContent = t('sub_bravo');
+  } else { subEl.textContent = ''; }
+
+  // Theme
+  applyTheme(avg3);
+
+  renderList();
+}
+
+function renderList() {
+  const sorted = [...packs].sort((a,b) => b.ts - a.ts); // newest first
+  const list = document.getElementById('packList');
+  list.innerHTML = '';
+  const show = sorted.slice(0, 20);
+  show.forEach((p, i) => {
+    const d = new Date(p.ts);
+    const prev = sorted[i+1];
+    const deltaH = prev ? ((p.ts - prev.ts) / 3600000).toFixed(1) : '–';
+    const item = document.createElement('div');
+    item.className = 'pack-item';
+    item.innerHTML = `
+      <div class="pack-num">${sorted.length - i}</div>
+      <div class="pack-info">
+        <div class="pack-datetime">${formatDate(d)}</div>
+        <div class="pack-delta">+${deltaH}h ${t('since_prev')}</div>
+      </div>
+      <div class="pack-actions">
+        <button class="pack-action-btn" onclick="event.stopPropagation();editPack(${p.id})" title="Modifier">✎</button>
+        <button class="pack-action-btn del" onclick="event.stopPropagation();deletePack(${p.id})" title="Supprimer">✕</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function formatDate(d) {
+  const days = TRANSLATIONS[currentLang].days;
+  const months = TRANSLATIONS[currentLang].months;
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} — ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ===================== ACTIONS =====================
+function addPack() {
+  const btn = document.getElementById('skullBtn');
+  btn.classList.remove('pulsing');
+  void btn.offsetWidth;
+  btn.classList.add('pulsing');
+
+  const newId = Date.now();
+  packs.push({ id: newId, ts: Date.now() });
+  save();
+  update();
+  showToast(t('toast_added'));
+
+  if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
+}
+
+function editPack(id) {
+  editingId = id;
+  const p = packs.find(x => x.id === id);
+  if (!p) return;
+  const d = new Date(p.ts);
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+  document.getElementById('editDatetime').value = local;
+  document.getElementById('modalTitle').textContent = t('modal_edit');
+  document.getElementById('editModal').classList.add('open');
+}
+
+function deletePack(id) {
+  if (!confirm(t('confirm_delete'))) return;
+  packs = packs.filter(p => p.id !== id);
+  save();
+  update();
+  showToast(t('toast_deleted'));
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+  editingId = null;
+}
+
+function saveEdit() {
+  const val = document.getElementById('editDatetime').value;
+  if (!val) return;
+  const ts = new Date(val).getTime();
+  const p = packs.find(x => x.id === editingId);
+  if (p) { p.ts = ts; save(); update(); }
+  closeModal();
+  showToast(t('toast_edited'));
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ===================== STATS PANEL =====================
+let chartDaily = null, chartInterval = null;
+
+function openStats() {
+  document.getElementById('statsPanel').classList.add('open');
+  const stats = calcStats();
+  document.getElementById('sAvg3').textContent = stats.avg3.toFixed(1);
+  document.getElementById('sAvg30').textContent = stats.avg30.toFixed(1);
+  document.getElementById('sAvgH3').textContent = stats.avgH3.toFixed(1);
+  document.getElementById('sAvgH30').textContent = stats.avgH30.toFixed(1);
+  drawCharts();
+}
+
+function closeStats() {
+  document.getElementById('statsPanel').classList.remove('open');
+}
+
+// ===================== CHARTS =====================
+// Swipeable bar chart engine
+// Each chart has its own state: offset = index of leftmost visible day (0 = oldest)
+const WIN = 30; // days visible at once
+
+const chartState = {
+  daily:    { offset: 0, labels: [], values: [], dragging: false, startX: 0, startOffset: 0 },
+  interval: { offset: 0, labels: [], values: [], dragging: false, startX: 0, startOffset: 0 }
+};
+
+function buildRollingAvgHistory() {
+  // Equivalent to ODS MOYENNE() over 3 days:
+  // Each bar = (packs in 72h window × 20) / divisor
+  // divisor = min(3, days elapsed since very first pack) → full 3d once history >= 3d
+  const sorted = [...packs].sort((a,b) => a.ts - b.ts);
+  if (sorted.length === 0) return { labels: [], values: [] };
+  const msDay = 86400000;
+  const ms72h = 72 * 3600000;
+  const globalFirstTs = sorted[0].ts; // very first pack ever
+  const firstDay = new Date(globalFirstTs); firstDay.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(23,59,59,999);
+  const labels = [], values = [];
+  for (let d = new Date(firstDay); d <= today; d = new Date(d.getTime() + msDay)) {
+    const windowEnd = new Date(d); windowEnd.setHours(23,59,59,999);
+    const windowEndTs = windowEnd.getTime();
+    const windowStartTs = windowEndTs - ms72h;
+    const packsInWindow = sorted.filter(p => p.ts > windowStartTs && p.ts <= windowEndTs);
+    let val = 0;
+    if (packsInWindow.length > 0) {
+      // Divisor: 3 full days, EXCEPT ramp-up for first 3 days of all-time history
+      const elapsedSinceFirstPackH = (windowEndTs - globalFirstTs) / 3600000;
+      const divisorH = Math.min(72, Math.max(elapsedSinceFirstPackH, 1));
+      val = packsInWindow.length * 20 / (divisorH / 24);
+    }
+    values.push(+val.toFixed(1));
+    labels.push(`${d.getDate()}/${d.getMonth()+1}`);
+  }
+  return { labels, values };
+}
+
+function buildIntervalHistory() {
+  const sorted = [...packs].sort((a,b) => a.ts - b.ts);
+  const labels = [], values = [];
+  for (let i = 1; i < sorted.length; i++) {
+    values.push(+((sorted[i].ts - sorted[i-1].ts) / 3600000).toFixed(1));
+    const d = new Date(sorted[i].ts);
+    labels.push(`${d.getDate()}/${d.getMonth()+1}`);
+  }
+  return { labels, values };
+}
+
+function getAccent() {
+  return document.documentElement.style.getPropertyValue('--accent').trim() || '#ffd700';
+}
+
+function drawChart(canvasId, state, rangeElId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 340;
+  const cssH = 160;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = cssW, H = cssH;
+
+  const color = getAccent();
+  const { labels, values, offset } = state;
+  const total = labels.length;
+  const win = Math.min(WIN, total);
+  const safeOffset = Math.max(0, Math.min(offset, total - win));
+  const visLabels = labels.slice(safeOffset, safeOffset + win);
+  const visValues = values.slice(safeOffset, safeOffset + win);
+
+  // Update range label
+  if (rangeElId && visLabels.length > 0) {
+    const el = document.getElementById(rangeElId);
+    if (el) el.textContent = `${visLabels[0]} — ${visLabels[visLabels.length-1]}`;
+  }
+
+  const pad = { top: 12, right: 8, bottom: 28, left: 30 };
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (visValues.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '11px Courier Prime, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Pas assez de données', W/2, H/2);
+    return;
+  }
+
+  const max = Math.max(...visValues, 1);
+  const n = visValues.length;
+  const barW = iW / n * 0.72;
+  const step = iW / n;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + iH - (i/4) * iH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + iW, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.font = `${Math.min(9, Math.floor(pad.left * 0.85))}px Courier Prime, monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(i/4 * max), pad.left - 3, y + 3);
+  }
+
+  // Bars
+  visValues.forEach((val, i) => {
+    const x = pad.left + i * step + (step - barW) / 2;
+    const bH = Math.max(val === 0 ? 0 : 2, (val / max) * iH);
+    const y = pad.top + iH - bH;
+    const grad = ctx.createLinearGradient(0, y, 0, pad.top + iH);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, color + '33');
+    ctx.fillStyle = grad;
+    if (ctx.roundRect) ctx.roundRect(x, y, barW, bH, [2, 2, 0, 0]);
+    else ctx.rect(x, y, barW, bH);
+    ctx.fill();
+  });
+
+  // X labels — every 5th or every if few bars
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  const fontSize = n <= 10 ? 9 : 8;
+  ctx.font = `${fontSize}px Courier Prime, monospace`;
+  ctx.textAlign = 'center';
+  const labelStep = n <= 10 ? 1 : n <= 20 ? 2 : 5;
+  visLabels.forEach((l, i) => {
+    if (i % labelStep === 0 || i === n - 1) {
+      ctx.fillText(l, pad.left + i * step + step/2, pad.top + iH + 16);
+    }
+  });
+}
+
+function attachSwipe(canvasId, state, rangeElId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  // Touch
+  canvas.addEventListener('touchstart', e => {
+    state.dragging = true;
+    state.startX = e.touches[0].clientX;
+    state.startOffset = state.offset;
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', e => {
+    if (!state.dragging) return;
+    const dx = e.touches[0].clientX - state.startX;
+    const cssW = canvas.clientWidth || 340;
+    const pxPerBar = cssW / Math.min(WIN, state.labels.length);
+    const delta = Math.round(-dx / pxPerBar);
+    const total = state.labels.length;
+    const win = Math.min(WIN, total);
+    state.offset = Math.max(0, Math.min(state.startOffset + delta, total - win));
+    drawChart(canvasId, state, rangeElId);
+  }, { passive: true });
+
+  canvas.addEventListener('touchend', () => { state.dragging = false; });
+
+  // Mouse (desktop)
+  canvas.addEventListener('mousedown', e => {
+    state.dragging = true;
+    state.startX = e.clientX;
+    state.startOffset = state.offset;
+  });
+  window.addEventListener('mousemove', e => {
+    if (!state.dragging) return;
+    const dx = e.clientX - state.startX;
+    const cssW = canvas.clientWidth || 340;
+    const pxPerBar = cssW / Math.min(WIN, state.labels.length);
+    const delta = Math.round(-dx / pxPerBar);
+    const total = state.labels.length;
+    const win = Math.min(WIN, total);
+    state.offset = Math.max(0, Math.min(state.startOffset + delta, total - win));
+    drawChart(canvasId, state, rangeElId);
+  });
+  window.addEventListener('mouseup', () => { state.dragging = false; });
+}
+
+function drawCharts() {
+  // Build data
+  const daily = buildRollingAvgHistory();
+  chartState.daily.labels = daily.labels;
+  chartState.daily.values = daily.values;
+  chartState.daily.offset = Math.max(0, daily.labels.length - WIN);
+
+  const intv = buildIntervalHistory();
+  chartState.interval.labels = intv.labels;
+  chartState.interval.values = intv.values;
+  chartState.interval.offset = Math.max(0, intv.labels.length - WIN);
+
+  // Draw — use requestAnimationFrame to ensure canvas has layout dimensions
+  requestAnimationFrame(() => {
+    drawChart('chartDaily', chartState.daily, 'chartRangeLabel');
+    drawChart('chartInterval', chartState.interval, null);
+    attachSwipe('chartDaily', chartState.daily, 'chartRangeLabel');
+    attachSwipe('chartInterval', chartState.interval, null);
+  });
+}
+
+// Legacy stubs (called nowhere but kept for safety)
+function onSliderChange() {}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(packs, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cigtracker_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        packs = data;
+        save(); update();
+        showToast(t('toast_imported'));
+      }
+    } catch { showToast(t('toast_invalid')); }
+  };
+  r.readAsText(file);
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+
+// ===================== SETTINGS =====================
+function openSettings() {
+  document.getElementById('settingsPanel').classList.add('open');
+  renderThresholdGrid();
+  updateLangTiles();
+  updateDeletePreview();
+}
+
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function updateLangTiles() {
+  document.querySelectorAll('.lang-tile').forEach(b => b.classList.remove('active'));
+  const tile = document.getElementById('ltile-' + currentLang);
+  if (tile) tile.classList.add('active');
+}
+
+// Threshold grid
+const ZONE_DEFS = [
+  { key: 't1', color: '#ffd700',  labelKey: 's_zone1' },
+  { key: 't2', color: '#52b788',  labelKey: 's_zone2' },
+  { key: 't3', color: '#ff9800',  labelKey: 's_zone3' },
+  { key: 't4', color: '#ff2222',  labelKey: 's_zone4' },
+  { key: 't5', color: '#7b00d4',  labelKey: 's_zone5' },
+];
+
+function renderThresholdGrid() {
+  const grid = document.getElementById('thresholdGrid');
+  grid.innerHTML = '';
+  ZONE_DEFS.forEach(z => {
+    const row = document.createElement('div');
+    row.className = 'threshold-row';
+    row.innerHTML = `
+      <div class="threshold-swatch" style="color:${z.color};background:${z.color}22;"></div>
+      <div class="threshold-label">${t(z.labelKey)}</div>
+      <input class="threshold-input" type="number" min="1" max="200"
+             id="thresh-${z.key}" value="${thresholds[z.key]}">
+    `;
+    grid.appendChild(row);
+  });
+}
+
+function applyThresholds() {
+  const newT = {};
+  ZONE_DEFS.forEach(z => {
+    const v = parseInt(document.getElementById('thresh-' + z.key).value);
+    newT[z.key] = isNaN(v) || v < 1 ? DEFAULT_THRESHOLDS[z.key] : v;
+  });
+  // Enforce ascending order
+  const keys = ['t1','t2','t3','t4','t5'];
+  for (let i = 1; i < keys.length; i++) {
+    if (newT[keys[i]] <= newT[keys[i-1]]) newT[keys[i]] = newT[keys[i-1]] + 1;
+  }
+  thresholds = newT;
+  localStorage.setItem(THRESH_KEY, JSON.stringify(thresholds));
+  renderThresholdGrid();
+  updateLegendPills();
+  update();
+  showToast(t('toast_thresh_saved'));
+}
+
+function resetThresholds() {
+  thresholds = { ...DEFAULT_THRESHOLDS };
+  localStorage.removeItem(THRESH_KEY);
+  renderThresholdGrid();
+  updateLegendPills();
+  update();
+  showToast(t('toast_thresh_reset'));
+}
+
+function updateLegendPills() {
+  const { t1, t2, t3, t4, t5 } = thresholds;
+  const pills = document.querySelectorAll('.legend-pill');
+  const vals = [
+    { val: '<' + t1, color: '#ffd700' },
+    { val: t1,       color: '#56cfe1' },
+    { val: t2,       color: '#52b788' },
+    { val: t2 + 1,   color: '#a8c060' },
+    { val: t3,       color: '#ff9800' },
+    { val: t3 + 1,   color: '#ff6600' },
+    { val: t4,       color: '#ff2222' },
+    { val: t4 + 1,   color: '#aa00cc' },
+    { val: t5 + '+', color: '#7b00d4' },
+  ];
+  pills.forEach((p, i) => {
+    if (vals[i]) {
+      p.textContent = vals[i].val;
+      p.style.borderColor = vals[i].color;
+      p.style.color = vals[i].color;
+    }
+  });
+}
+
+// Delete date range
+function updateDeletePreview() {
+  const from = document.getElementById('deleteFrom').value;
+  const to   = document.getElementById('deleteTo').value;
+  const prev = document.getElementById('deleteRangePreview');
+  if (!from || !to) { prev.textContent = ''; return; }
+  const fromTs = new Date(from).setHours(0,0,0,0);
+  const toTs   = new Date(to).setHours(23,59,59,999);
+  if (fromTs > toTs) { prev.textContent = t('s_invalid_range'); return; }
+  const count = packs.filter(p => p.ts >= fromTs && p.ts <= toTs).length;
+  prev.textContent = count + ' ' + t('s_packs_in_range');
+}
+
+// Wire up date inputs
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('deleteFrom').addEventListener('change', updateDeletePreview);
+  document.getElementById('deleteTo').addEventListener('change', updateDeletePreview);
+});
+
+function deleteRange() {
+  const from = document.getElementById('deleteFrom').value;
+  const to   = document.getElementById('deleteTo').value;
+  if (!from || !to) { showToast(t('s_pick_dates')); return; }
+  const fromTs = new Date(from).setHours(0,0,0,0);
+  const toTs   = new Date(to).setHours(23,59,59,999);
+  if (fromTs > toTs) { showToast(t('s_invalid_range')); return; }
+  const before = packs.length;
+  packs = packs.filter(p => p.ts < fromTs || p.ts > toTs);
+  const removed = before - packs.length;
+  save(); update();
+  document.getElementById('deleteRangePreview').textContent = '';
+  showToast(removed + ' ' + t('toast_range_deleted'));
+}
+
+function fullReset() {
+  if (!confirm(t('confirm_full_reset'))) return;
+  packs = [];
+  thresholds = { ...DEFAULT_THRESHOLDS };
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(THRESH_KEY);
+  updateLegendPills();
+  update();
+  showToast(t('toast_full_reset'));
+  closeSettings();
+}
+
+// ===================== INIT =====================
+currentLang = detectLang();
+load();
+setLang(currentLang);
+update();
+
+// Auto-update every minute for time-based stats
+setInterval(update, 60000);
+
+// Register service worker for offline PWA support
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => {
+      // If there's a waiting SW (new version), activate it immediately
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            nw.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    })
+    .catch(() => {}); // silently fail if SW not supported
+}
+</script>
+</body>
+</html>
