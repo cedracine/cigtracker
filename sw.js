@@ -1,5 +1,5 @@
 // CigTracker Service Worker — fonctionne sur n'importe quel sous-chemin
-const CACHE = 'cigtracker-v7';
+const CACHE = 'cigtracker-v8';
 
 // Le basePath est détecté automatiquement depuis l'URL du SW lui-même
 // Ex: /CigTracker/sw.js → basePath = /CigTracker/
@@ -9,7 +9,6 @@ const ASSETS = [
   basePath,
   basePath + 'index.html',
   basePath + 'manifest.json',
-  basePath + 'icon.svg',
   basePath + 'icon-192.png',
   basePath + 'icon-512.png',
   basePath + 'screenshot-wide.png',
