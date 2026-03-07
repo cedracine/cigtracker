@@ -1960,6 +1960,23 @@ function lerpColor(a, b, lr) {
   return '#'+[rr,rg,rb].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
 
+// Returns the threshold color for a cigarette count (same scale used everywhere)
+function getThresholdColor(val) {
+  const { t1, t2, t3, t4, t5 } = thresholds;
+  if (val < t1)  return '#ffd700';
+  if (val <= t2) return lerpColor('#56cfe1', '#52b788', (val - t1) / Math.max(1, t2 - t1));
+  if (val <= t3) return lerpColor('#52b788', '#ff9800', (val - t2) / Math.max(1, t3 - t2));
+  if (val <= t4) return lerpColor('#ff9800', '#ff2222', (val - t3) / Math.max(1, t4 - t3));
+  return lerpColor('#ff2222', '#7b00d4', Math.min(1, (val - t4) / Math.max(1, t5 - t4)));
+}
+
+// Returns the threshold color for an avg interval in minutes (longer = better = gold)
+// Converts avg interval to equivalent daily cig count: 1440 min / avgMin = cigs/day
+function getIntervalColor(avgMin) {
+  if (!avgMin) return '#56cfe1';
+  return getThresholdColor(1440 / Math.max(1, avgMin));
+}
+
 function applyTheme(count24) {
   const { t1, t2, t3, t4, t5 } = thresholds;
   let accent, bg1, bg2;
@@ -2003,7 +2020,11 @@ function update() {
           minSinceLast, avgIntervalForHero, totalCigs } = stats;
 
   // Big number: total cig last 24h
-  document.getElementById('avgNumber').textContent = total24;
+  const avgNumEl = document.getElementById('avgNumber');
+  avgNumEl.textContent = total24;
+  const c24color = getThresholdColor(total24);
+  avgNumEl.style.color = c24color;
+  avgNumEl.style.textShadow = `0 0 40px ${c24color}99`;
 
   // Trend 3j
   const trendEl = document.getElementById('statTrend');
@@ -2017,27 +2038,41 @@ function update() {
     trendEl.textContent = '= ' + (trendPct >= 0 ? '+' : '') + trendPct + '%'; trendEl.className = 'val trend-stable';
   }
 
-  // Pack 7j (1 decimal)
-  document.getElementById('statPPM').textContent = packs168 > 0 ? packs168.toFixed(1) : '–';
+  // Pack 7j (1 decimal) — color based on avg daily equivalent
+  const ppmEl = document.getElementById('statPPM');
+  ppmEl.textContent = packs168 > 0 ? packs168.toFixed(1) : '–';
+  const ppmColor = getThresholdColor(avgCigDay7);
+  ppmEl.style.color = ppmColor;
 
   // Hero: hh:mm depuis dernière cig + moy 3j
   const heroEl = document.getElementById('statLast');
   const heroAvgEl = document.getElementById('heroAvgHH');
+  const heroBarEl = document.getElementById('heroBar');
+  const intervalColor = getIntervalColor(minSinceLast);
+  const avgIntervalColor = getIntervalColor(avgIntervalForHero);
   if (minSinceLast !== null) {
     heroEl.textContent = formatHHMM(minSinceLast);
+    heroEl.style.color = intervalColor;
+    heroEl.style.textShadow = `0 0 24px ${intervalColor}99`;
   } else {
     heroEl.textContent = '–';
+    heroEl.style.color = '';
+    heroEl.style.textShadow = '';
   }
   if (avgIntervalForHero !== null) {
     heroAvgEl.textContent = formatHHMM(avgIntervalForHero);
+    heroAvgEl.style.color = avgIntervalColor;
   } else {
     heroAvgEl.textContent = '–';
+    heroAvgEl.style.color = '';
   }
 
   // Progress bar
   const refMin = avgIntervalForHero || 60;
   const barPct = minSinceLast !== null ? Math.min(100, (minSinceLast / Math.max(refMin, 5)) * 100) : 0;
-  document.getElementById('heroBar').style.width = barPct + '%';
+  heroBarEl.style.width = barPct + '%';
+  heroBarEl.style.background = intervalColor;
+  heroBarEl.style.boxShadow = `0 0 8px ${intervalColor}`;
 
   // Sublabel
   const subEl = document.getElementById('heroSublabel');
@@ -2188,10 +2223,45 @@ function renderStatsCards() {
   const stats = calcStats();
   const { total24, avgInterval72hMin, avgCigDay7, packs168 } = stats;
 
-  document.getElementById('sTotal24').textContent = total24 > 0 ? total24 : '0';
-  document.getElementById('sAvgInterval72').textContent = avgInterval72hMin ? formatHHMM(avgInterval72hMin) : '–';
-  document.getElementById('sAvgDay7').textContent = avgCigDay7 > 0 ? avgCigDay7.toFixed(1) : '–';
-  document.getElementById('sPack168').textContent = packs168 > 0 ? packs168.toFixed(1) : '–';
+  // sTotal24 — colored by count
+  const sTotal24El = document.getElementById('sTotal24');
+  sTotal24El.textContent = total24 > 0 ? total24 : '0';
+  const sTotal24Color = getThresholdColor(total24);
+  sTotal24El.style.color = sTotal24Color;
+  sTotal24El.style.textShadow = `0 0 20px ${sTotal24Color}88`;
+
+  // sAvgInterval72 — colored by interval (longer = better = gold)
+  const sAvgIntvEl = document.getElementById('sAvgInterval72');
+  sAvgIntvEl.textContent = avgInterval72hMin ? formatHHMM(avgInterval72hMin) : '–';
+  if (avgInterval72hMin) {
+    const sAvgIntvColor = getIntervalColor(avgInterval72hMin);
+    sAvgIntvEl.style.color = sAvgIntvColor;
+    sAvgIntvEl.style.textShadow = `0 0 20px ${sAvgIntvColor}88`;
+  } else {
+    sAvgIntvEl.style.color = ''; sAvgIntvEl.style.textShadow = '';
+  }
+
+  // sAvgDay7 — colored by avg daily cig count
+  const sAvgDay7El = document.getElementById('sAvgDay7');
+  sAvgDay7El.textContent = avgCigDay7 > 0 ? avgCigDay7.toFixed(1) : '–';
+  if (avgCigDay7 > 0) {
+    const sAvgDay7Color = getThresholdColor(avgCigDay7);
+    sAvgDay7El.style.color = sAvgDay7Color;
+    sAvgDay7El.style.textShadow = `0 0 20px ${sAvgDay7Color}88`;
+  } else {
+    sAvgDay7El.style.color = ''; sAvgDay7El.style.textShadow = '';
+  }
+
+  // sPack168 — colored by avg daily cig count (same scale)
+  const sPack168El = document.getElementById('sPack168');
+  sPack168El.textContent = packs168 > 0 ? packs168.toFixed(1) : '–';
+  if (packs168 > 0) {
+    const sPack168Color = getThresholdColor(avgCigDay7);
+    sPack168El.style.color = sPack168Color;
+    sPack168El.style.textShadow = `0 0 20px ${sPack168Color}88`;
+  } else {
+    sPack168El.style.color = ''; sPack168El.style.textShadow = '';
+  }
 }
 
 // ===================== CHARTS =====================
@@ -2315,17 +2385,12 @@ function drawChart(canvasId, state, rangeLabelId) {
     const bWidth = bw * 0.8;
     const y = pad.top + (H - pad.top - pad.bottom) - barH;
 
-    // Color gradient based on val (for daily chart) or fixed for interval
+    // Color gradient based on val (for daily chart) or threshold-mapped for interval
     let barColor = accent;
     if (state === chartState.daily) {
-      const { t1, t2, t3, t4, t5 } = thresholds;
-      if (val < t1) barColor = '#ffd700';
-      else if (val <= t2) barColor = lerpColor('#56cfe1', '#52b788', (val - t1) / Math.max(1, t2 - t1));
-      else if (val <= t3) barColor = lerpColor('#52b788', '#ff9800', (val - t2) / Math.max(1, t3 - t2));
-      else if (val <= t4) barColor = lerpColor('#ff9800', '#ff2222', (val - t3) / Math.max(1, t4 - t3));
-      else barColor = lerpColor('#ff2222', '#7b00d4', Math.min(1, (val - t4) / Math.max(1, t5 - t4)));
+      barColor = getThresholdColor(val);
     } else {
-      barColor = '#56cfe1';
+      barColor = getIntervalColor(val);
     }
 
     ctx.fillStyle = barColor;
