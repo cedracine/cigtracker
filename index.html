@@ -567,14 +567,14 @@
   // Register real Service Worker (required for PWA install prompt)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('/cigtracker/sw.js', { scope: '/cigtracker/' })
         .then(reg => console.log('[SW] registered', reg.scope))
         .catch(err => console.warn('[SW] failed', err));
     });
   }
 </script>
 
-  <link rel="manifest" href="./manifest.json">
+  <link rel="manifest" href="/cigtracker/manifest.json">
 </head>
 <body>
 <div class="bg-layer" id="bgLayer"></div>

@@ -2,11 +2,12 @@
   "name": "CigTracker",
   "short_name": "CigTracker",
   "description": "Track your smoking habits",
-  "start_url": "./",
-  "scope": "./",
+  "id": "/cigtracker/",
+  "start_url": "/cigtracker/",
+  "scope": "/cigtracker/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
+  "background_color": "#0d0d1a",
+  "theme_color": "#ffd700",
   "orientation": "portrait",
   "icons": [
     {
