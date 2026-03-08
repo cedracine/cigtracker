@@ -2817,8 +2817,13 @@ function fullReset() {
   if (!confirm(t('confirmReset'))) return;
   cigs = [];
   thresholds = { ...DEFAULT_THRESHOLDS };
+  // Clear current key
   localStorage.removeItem(STORE_KEY);
   localStorage.removeItem(THRESH_KEY);
+  // Clear ALL legacy keys so migration doesn't resurrect old data
+  const ALL_KEYS = ['smoketracker_v4','smoketracker_v3','smoketracker_v2','smoketracker_v1','cigtracker_data'];
+  ALL_KEYS.forEach(k => localStorage.removeItem(k));
+  save(); // write [] to STORE_KEY so migration is skipped on next reload
   updateLegendPills();
   update();
   showToast(t('toastErased'));
@@ -3160,14 +3165,15 @@ function load() {
   }
   // Load cigs data - migrate from old keys if needed
   const raw = localStorage.getItem(STORE_KEY);
+  const storeKeyExists = raw !== null; // key was explicitly set (even if empty)
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
       cigs = Array.isArray(parsed) ? parsed : [];
     } catch(e) { cigs = []; }
   }
-  // Migration: check older store keys
-  if (cigs.length === 0) {
+  // Migration: check older store keys ONLY if current key was never set
+  if (!storeKeyExists && cigs.length === 0) {
     const OLD_KEYS = ['smoketracker_v4','smoketracker_v3','smoketracker_v2','smoketracker_v1','cigtracker_data'];
     for (const k of OLD_KEYS) {
       const old = localStorage.getItem(k);
