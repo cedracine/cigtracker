@@ -349,6 +349,95 @@
   .pack-action-btn.del { border-color: rgba(255,80,80,0.4); }
   .pack-action-btn.del:active { background: rgba(255,80,80,0.2); }
 
+  /* Pack milestone — every 20th cig */
+  .pack-item.milestone {
+    border-color: var(--accent);
+    background: linear-gradient(90deg, rgba(255,215,0,0.10) 0%, var(--card) 60%);
+    box-shadow: 0 0 8px rgba(255,215,0,0.18);
+  }
+  .pack-item.milestone .pack-num {
+    color: #1a1a2e;
+    background: var(--accent);
+    border-radius: 6px;
+    padding: 1px 5px;
+    font-size: 18px;
+    min-width: 32px;
+    text-align: center;
+  }
+  .milestone-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    color: var(--accent); opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  /* "Tout l'Historique" button */
+  .btn-full-history {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; margin-top: 14px;
+    padding: 11px 0; border-radius: 10px;
+    background: none; border: 1px solid var(--card-border);
+    color: var(--text); font-family: 'Bebas Neue', cursive;
+    font-size: 16px; letter-spacing: 0.08em; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-full-history:active { border-color: var(--accent); background: rgba(255,215,0,0.07); }
+
+  /* Donate button */
+  .btn-donate {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; margin-top: 8px;
+    padding: 11px 0; border-radius: 10px;
+    background: none; border: 1px solid rgba(255,215,0,0.35);
+    color: var(--accent); font-family: 'Bebas Neue', cursive;
+    font-size: 16px; letter-spacing: 0.08em; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    text-decoration: none;
+  }
+  .btn-donate:active { border-color: var(--accent); background: rgba(255,215,0,0.10); }
+
+  /* Full history overlay — slide up from bottom like manual */
+  .fullhist-overlay {
+    position: fixed; inset: 0; z-index: 5000;
+    background: rgba(0,0,0,0.78); backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .fullhist-overlay.open { opacity: 1; pointer-events: all; }
+  .fullhist-modal {
+    width: 100%; max-width: 520px; max-height: 92vh;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+    transform: translateY(40px); transition: transform 0.3s ease;
+  }
+  .fullhist-overlay.open .fullhist-modal { transform: translateY(0); }
+  .fullhist-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255,215,0,0.15);
+    flex-shrink: 0;
+  }
+  .fullhist-title {
+    font-family: 'Bebas Neue', cursive; font-size: 20px;
+    letter-spacing: 3px; color: var(--accent); margin: 0; flex: 1;
+  }
+  .fullhist-count { font-size: 12px; opacity: 0.5; margin-right: 10px; }
+  .fullhist-close {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #e8e8e8; font-size: 18px; width: 32px; height: 32px;
+    border-radius: 50%; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .fullhist-close:active { background: rgba(255,80,80,0.25); border-color: rgba(255,80,80,0.5); }
+  .fullhist-body {
+    flex: 1; overflow-y: auto;
+    padding: 12px 16px 32px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
   /* Legend pills */
   .legend-row {
     display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 8px 0 4px;
@@ -656,6 +745,20 @@
 
   <div class="section-title" id="recentHistoryTitle">HISTORIQUE RÉCENT</div>
   <div class="pack-list" id="packList" style="position:relative;z-index:10;"></div>
+  <button class="btn-full-history" id="btnFullHistory" onclick="openFullHistory()">☰ TOUT L'HISTORIQUE</button>
+  <a class="btn-donate" id="btnDonate" href="https://donate.cedracine.com" target="_blank" rel="noopener">❤ DONNEZ · CONTACT</a>
+</div>
+
+<!-- Full History Overlay -->
+<div class="fullhist-overlay" id="fullHistOverlay" onclick="if(event.target===this)closeFullHistory()">
+  <div class="fullhist-modal">
+    <div class="fullhist-header">
+      <div class="fullhist-title" id="fullHistTitle">TOUT L'HISTORIQUE</div>
+      <span class="fullhist-count" id="fullHistCount"></span>
+      <button class="fullhist-close" onclick="closeFullHistory()">✕</button>
+    </div>
+    <div class="fullhist-body" id="fullHistBody"></div>
+  </div>
 </div>
 
 <!-- Edit Modal -->
@@ -886,6 +989,10 @@ const TRANSLATIONS = {
     zLabel3:'Vert→Orange ≤ seuil 3',
     zLabel4:'Orange→Rouge ≤ seuil 4',
     zLabel5:'Rouge→Violet ≤ seuil 5',
+    allHistoryBtn:'☰ TOUT L\'HISTORIQUE',
+    allHistoryTitle:'TOUT L\'HISTORIQUE',
+    packBadge:'📦 PAQUET #',
+    donateBtn:'❤ DONNEZ · CONTACT',
   },
 
   en: {
@@ -958,6 +1065,10 @@ const TRANSLATIONS = {
     zLabel3:'Green→Orange ≤ thresh 3',
     zLabel4:'Orange→Red ≤ thresh 4',
     zLabel5:'Red→Purple ≤ thresh 5',
+    allHistoryBtn:'☰ ALL HISTORY',
+    allHistoryTitle:'ALL HISTORY',
+    packBadge:'📦 PACK #',
+    donateBtn:'❤ DONATE · CONTACT',
   },
 
   es: {
@@ -1030,6 +1141,10 @@ const TRANSLATIONS = {
     zLabel3:'Verde→Naranja ≤ umbral 3',
     zLabel4:'Naranja→Rojo ≤ umbral 4',
     zLabel5:'Rojo→Violeta ≤ umbral 5',
+    allHistoryBtn:'☰ HISTORIAL COMPLETO',
+    allHistoryTitle:'HISTORIAL COMPLETO',
+    packBadge:'📦 PAQUETE #',
+    donateBtn:'❤ DONAR · CONTACTO',
   },
 
   de: {
@@ -1102,6 +1217,10 @@ const TRANSLATIONS = {
     zLabel3:'Grün→Orange ≤ Schwelle 3',
     zLabel4:'Orange→Rot ≤ Schwelle 4',
     zLabel5:'Rot→Lila ≤ Schwelle 5',
+    allHistoryBtn:'☰ GESAMTVERLAUF',
+    allHistoryTitle:'GESAMTVERLAUF',
+    packBadge:'📦 PÄCKCHEN #',
+    donateBtn:'❤ SPENDEN · KONTAKT',
   },
 
   it: {
@@ -1174,6 +1293,10 @@ const TRANSLATIONS = {
     zLabel3:'Verde→Arancio ≤ soglia 3',
     zLabel4:'Arancio→Rosso ≤ soglia 4',
     zLabel5:'Rosso→Viola ≤ soglia 5',
+    allHistoryBtn:'☰ STORICO COMPLETO',
+    allHistoryTitle:'STORICO COMPLETO',
+    packBadge:'📦 PACCHETTO #',
+    donateBtn:'❤ DONA · CONTATTO',
   },
 
   pt: {
@@ -1246,6 +1369,10 @@ const TRANSLATIONS = {
     zLabel3:'Verde→Laranja ≤ limiar 3',
     zLabel4:'Laranja→Vermelho ≤ limiar 4',
     zLabel5:'Vermelho→Roxo ≤ limiar 5',
+    allHistoryBtn:'☰ HISTÓRICO COMPLETO',
+    allHistoryTitle:'HISTÓRICO COMPLETO',
+    packBadge:'📦 MAÇO #',
+    donateBtn:'❤ DOAÇÃO · CONTATO',
   },
 
   ru: {
@@ -1318,6 +1445,10 @@ const TRANSLATIONS = {
     zLabel3:'Зелёный→Оранж ≤ порог 3',
     zLabel4:'Оранж→Красный ≤ порог 4',
     zLabel5:'Красный→Фиолет ≤ порог 5',
+    allHistoryBtn:'☰ ВСЯ ИСТОРИЯ',
+    allHistoryTitle:'ВСЯ ИСТОРИЯ',
+    packBadge:'📦 ПАЧКА #',
+    donateBtn:'❤ ПОДДЕРЖАТЬ · КОНТАКТ',
   },
 
   zh: {
@@ -1390,6 +1521,10 @@ const TRANSLATIONS = {
     zLabel3:'绿→橙 ≤ 阈值3',
     zLabel4:'橙→红 ≤ 阈值4',
     zLabel5:'红→紫 ≤ 阈值5',
+    allHistoryBtn:'☰ 完整历史',
+    allHistoryTitle:'完整历史',
+    packBadge:'📦 包 #',
+    donateBtn:'❤ 捐赠 · 联系',
   },
 
   ja: {
@@ -1462,6 +1597,10 @@ const TRANSLATIONS = {
     zLabel3:'緑→橙 ≤ 閾値3',
     zLabel4:'橙→赤 ≤ 閾値4',
     zLabel5:'赤→紫 ≤ 閾値5',
+    allHistoryBtn:'☰ 全履歴',
+    allHistoryTitle:'全履歴',
+    packBadge:'📦 パック #',
+    donateBtn:'❤ 寄付 · お問い合わせ',
   },
 
   vi: {
@@ -1534,6 +1673,10 @@ const TRANSLATIONS = {
     zLabel3:'Lục→Cam ≤ ngưỡng 3',
     zLabel4:'Cam→Đỏ ≤ ngưỡng 4',
     zLabel5:'Đỏ→Tím ≤ ngưỡng 5',
+    allHistoryBtn:'☰ TOÀN BỘ LỊCH SỬ',
+    allHistoryTitle:'TOÀN BỘ LỊCH SỬ',
+    packBadge:'📦 GÓI #',
+    donateBtn:'❤ ỦNG HỘ · LIÊN HỆ',
   },
   th: {
     appTitle:'CIGTRACKER',
@@ -1605,6 +1748,10 @@ const TRANSLATIONS = {
     zLabel3:'เขียว→ส้ม ≤ ระดับ 3',
     zLabel4:'ส้ม→แดง ≤ ระดับ 4',
     zLabel5:'แดง→ม่วง ≤ ระดับ 5',
+    allHistoryBtn:'☰ ประวัติทั้งหมด',
+    allHistoryTitle:'ประวัติทั้งหมด',
+    packBadge:'📦 ซอง #',
+    donateBtn:'❤ บริจาค · ติดต่อ',
   },
   km: {
     appTitle:'CIGTRACKER',
@@ -1676,6 +1823,10 @@ const TRANSLATIONS = {
     zLabel3:'បៃតង→ទឹកក្រូច ≤ កម្រិត 3',
     zLabel4:'ទឹកក្រូច→ក្រហម ≤ កម្រិត 4',
     zLabel5:'ក្រហម→ស្វាយ ≤ កម្រិត 5',
+    allHistoryBtn:'☰ ប្រវត្តិទាំងអស់',
+    allHistoryTitle:'ប្រវត្តិទាំងអស់',
+    packBadge:'📦 កញ្ចប់ #',
+    donateBtn:'❤ បរិច្ចាគ · ទំនាក់ទំនង',
   },
 };
 
@@ -1783,6 +1934,12 @@ function applyTranslations() {
   // Manual button
   const manualBtnLabel = document.getElementById('manualBtnLabel');
   if (manualBtnLabel) manualBtnLabel.textContent = t('manualBtn');
+  const btnFH = document.getElementById('btnFullHistory');
+  if (btnFH) btnFH.textContent = t('allHistoryBtn');
+  const btnD = document.getElementById('btnDonate');
+  if (btnD) btnD.textContent = t('donateBtn');
+  const fullHistTitleEl = document.getElementById('fullHistTitle');
+  if (fullHistTitleEl) fullHistTitleEl.textContent = t('allHistoryTitle');
   // Homepage card labels
   const heroLblEl = document.getElementById('heroLbl');
   if (heroLblEl) heroLblEl.textContent = t('heroLbl');
@@ -2125,35 +2282,78 @@ function updateLegendPills() {
   });
 }
 
+// Build a single pack-item div (shared by renderList & full history)
+function buildPackItem(c, rank, prev) {
+  const isMilestone = (rank % 20 === 0);
+  const d = new Date(c.ts);
+  let deltaStr = '–';
+  if (prev) {
+    const deltaMin = (c.ts - prev.ts) / 60000;
+    deltaStr = formatHHMM(deltaMin);
+  }
+  const item = document.createElement('div');
+  item.className = 'pack-item' + (isMilestone ? ' milestone' : '');
+  item.innerHTML = `
+    <div class="pack-num">${rank}</div>
+    <div class="pack-info">
+      <div class="pack-datetime">${formatDate(d)}</div>
+      <div class="pack-delta">${t('deltaLabel').replace('${d}', deltaStr)}</div>
+      ${isMilestone ? `<div class="milestone-badge">${t('packBadge')}${rank/20}</div>` : ''}
+    </div>
+    <div class="pack-actions">
+      <button class="pack-action-btn" onclick="event.stopPropagation();editCig(${c.id})" title="Modifier">✎</button>
+      <button class="pack-action-btn del" onclick="event.stopPropagation();deleteCig(${c.id})" title="Supprimer">✕</button>
+    </div>
+  `;
+  return item;
+}
+
 function renderList() {
   const sorted = [...cigs].sort((a, b) => b.ts - a.ts);
   const list = document.getElementById('packList');
   list.innerHTML = '';
   const show = sorted.slice(0, 30);
   show.forEach((c, i) => {
-    const d = new Date(c.ts);
+    const rank = sorted.length - i;
     const prev = sorted[i + 1];
-    let deltaStr = '–';
-    if (prev) {
-      const deltaMin = (c.ts - prev.ts) / 60000;
-      deltaStr = formatHHMM(deltaMin);
-    }
-    const item = document.createElement('div');
-    item.className = 'pack-item';
-    item.innerHTML = `
-      <div class="pack-num">${sorted.length - i}</div>
-      <div class="pack-info">
-        <div class="pack-datetime">${formatDate(d)}</div>
-        <div class="pack-delta">${t('deltaLabel').replace('${d}', deltaStr)}</div>
-      </div>
-      <div class="pack-actions">
-        <button class="pack-action-btn" onclick="event.stopPropagation();editCig(${c.id})" title="Modifier">✎</button>
-        <button class="pack-action-btn del" onclick="event.stopPropagation();deleteCig(${c.id})" title="Supprimer">✕</button>
-      </div>
-    `;
-    list.appendChild(item);
+    list.appendChild(buildPackItem(c, rank, prev));
   });
 }
+
+function openFullHistory() {
+  const sorted = [...cigs].sort((a, b) => b.ts - a.ts);
+  const body = document.getElementById('fullHistBody');
+  const countEl = document.getElementById('fullHistCount');
+  const titleEl = document.getElementById('fullHistTitle');
+  body.innerHTML = '';
+  titleEl.textContent = t('allHistoryTitle');
+  countEl.textContent = sorted.length + ' cig.';
+  sorted.forEach((c, i) => {
+    const rank = sorted.length - i;
+    const prev = sorted[i + 1];
+    body.appendChild(buildPackItem(c, rank, prev));
+  });
+  const modal = document.querySelector('.fullhist-modal');
+  if (modal) {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#1a1a2e';
+    modal.style.background = bg;
+  }
+  document.getElementById('fullHistOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  history.pushState({ fullhist: true }, '');
+}
+
+function closeFullHistory() {
+  document.getElementById('fullHistOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+window.addEventListener('popstate', () => {
+  if (document.getElementById('fullHistOverlay').classList.contains('open')) {
+    closeFullHistory();
+  }
+});
+
 
 function formatDate(d) {
   // Use locale-aware day/month names
@@ -2195,6 +2395,7 @@ function deleteCig(id) {
   save(); update();
   showToast(t('toastDeleted'));
   refreshChartsIfOpen();
+  if (document.getElementById('fullHistOverlay').classList.contains('open')) openFullHistory();
 }
 
 function closeModal() {
@@ -2211,6 +2412,7 @@ function saveEdit() {
   closeModal();
   showToast(t('toastModified'));
   refreshChartsIfOpen();
+  if (document.getElementById('fullHistOverlay').classList.contains('open')) openFullHistory();
 }
 
 document.getElementById('editModal').addEventListener('click', function(e) {
@@ -2840,15 +3042,20 @@ function exportData() {
 
 function importData(e) {
   const file = e.target.files[0];
+  e.target.value = '';
   if (!file) return;
   const r = new FileReader();
   r.onload = ev => {
     try {
-      const data = JSON.parse(ev.target.result);
-      if (Array.isArray(data)) {
-        cigs = data;
+      const raw = ev.target.result;
+      const data = JSON.parse(raw);
+      const arr = Array.isArray(data) ? data : (Array.isArray(data.cigs) ? data.cigs : null);
+      if (arr && arr.length > 0) {
+        cigs = arr;
         save(); update();
         showToast(t('toastImported'));
+      } else {
+        showToast(t('toastInvalidFile'));
       }
     } catch { showToast(t('toastInvalidFile')); }
   };
