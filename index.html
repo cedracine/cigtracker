@@ -824,6 +824,7 @@
         <div class="pie-legend" id="pieLegend"></div>
       </div>
     </div>
+  <a class="btn-donate" id="btnDonateStats" href="https://donate.cedracine.com" target="_blank" rel="noopener" style="margin:18px 16px 8px;">❤ DONNEZ · CONTACT</a>
   </div>
 </div>
 
@@ -895,6 +896,7 @@
       <div class="settings-label" id="dangerDesc" style="margin-top:6px;opacity:0.4;">Efface toutes les données et remet les seuils par défaut</div>
     </div>
 
+    <a class="btn-donate" id="btnDonateSettings" href="https://donate.cedracine.com" target="_blank" rel="noopener" style="margin:18px 0 8px;">❤ DONNEZ · CONTACT</a>
   </div>
 </div>
 
@@ -1857,8 +1859,7 @@ function setLang(code) {
 function applyTranslations() {
   // App title is now an <img> logo — skip text override
   // Skull button label
-  const skullLabel = document.getElementById('skullLabel');
-  if (skullLabel) skullLabel.textContent = t('btnSmoke');
+  // skullLabel is now dynamic (context-aware) — updated in update(), not here
   // Header stats button
   const statsBtn = document.getElementById('statsBtn2');
   if (statsBtn) statsBtn.textContent = t('headerStats');
@@ -1938,6 +1939,10 @@ function applyTranslations() {
   if (btnFH) btnFH.textContent = t('allHistoryBtn');
   const btnD = document.getElementById('btnDonate');
   if (btnD) btnD.textContent = t('donateBtn');
+  const btnDS = document.getElementById('btnDonateStats');
+  if (btnDS) btnDS.textContent = t('donateBtn');
+  const btnDSt = document.getElementById('btnDonateSettings');
+  if (btnDSt) btnDSt.textContent = t('donateBtn');
   const fullHistTitleEl = document.getElementById('fullHistTitle');
   if (fullHistTitleEl) fullHistTitleEl.textContent = t('allHistoryTitle');
   // Homepage card labels
@@ -2257,6 +2262,9 @@ function update() {
   applyTheme(total24);
   updateLegendPills();
   renderList();
+  // Update skull button label contextually
+  const skullLabelEl = document.getElementById('skullLabel');
+  if (skullLabelEl) skullLabelEl.textContent = getSmokeLabel(minSinceLast, avgIntervalForHero);
 }
 
 function updateLegendPills() {
@@ -3340,6 +3348,97 @@ const MANUAL_CONTENT = {
 <div class="man-h1">8 · គាំទ្រ SMOKETRACKER</div>
 <p class="man-p">SmokeTracker ពិតជាល្អ ឬបានជួយអ្នកឱ្យជក់តិច — ហើយប្រហែលជាសន្សំបានទឹកប្រាក់ផងដែរ? ហេតុអ្វីមិនបង្អោននូវតម្លៃស្មើបារីចំនួនពីរបី… ឬប្រអប់មួយ?</p><p class="man-p">Crypto · Revolut · កាត · Apple Pay · PayPal → <a href="https://cedracine.com/donate" target="_blank" style="color:#ffd700">cedracine.com/donate</a></p>`,
 };
+
+// ===================== SMOKE BUTTON LABELS =====================
+// Context-aware dark-humour labels based on interval vs personal average
+// Zones: first (no prev), tooSoon (<70% of avg), onTime (70-130%), late (>130%)
+const SMOKE_LABELS = {
+  fr: {
+    first:   ["La première de combien ?", "Bonne chance pour la suite.", "C'est parti, comme d'hab.", "Et voilà, ça commence."],
+    tooSoon: ["Déjà ? T'es sûr…", "C'était si long à attendre ?", "Le chrono te fait pitié.", "Tu tiens des records, toi."],
+    onTime:  ["Dans les temps, comme d'hab.", "Régulier comme une horloge.", "Ta moyenne te dit merci.", "Ponctuel au rendez-vous."],
+    late:    ["Tu as tenu… bravo je suppose.", "Un record ? Presque.", "La volonté a ses limites.", "Résiste encore un peu… ou pas."],
+  },
+  en: {
+    first:   ["First of how many?", "Good luck with the rest.", "Here we go again.", "And so it begins."],
+    tooSoon: ["Already? Really?", "That was a long wait… not.", "The timer feels sorry for you.", "Breaking records, I see."],
+    onTime:  ["Right on schedule, as usual.", "Regular as clockwork.", "Your average thanks you.", "Punctual as ever."],
+    late:    ["You held out… I guess.", "A record? Almost.", "Willpower has its limits.", "Resist a bit more… or not."],
+  },
+  es: {
+    first:   ["¿La primera de cuántas?", "Buena suerte con el resto.", "Allá vamos, como siempre.", "Y así empieza todo."],
+    tooSoon: ["¿Ya? ¿En serio?", "¿Tanto tiempo esperando? No.", "El cronómetro te tiene lástima.", "Rompiendo récords, por lo visto."],
+    onTime:  ["En horario, como siempre.", "Regular como un reloj.", "Tu promedio te lo agradece.", "Puntual como de costumbre."],
+    late:    ["Aguantaste… supongo.", "¿Un récord? Casi.", "La fuerza de voluntad tiene límites.", "Resiste un poco más… o no."],
+  },
+  de: {
+    first:   ["Die erste von wie vielen?", "Viel Glück mit dem Rest.", "Na dann, wie immer.", "Und so fängt es an."],
+    tooSoon: ["Schon? Wirklich?", "Das war eine lange Pause… nicht.", "Der Timer hat Mitleid.", "Rekorde brechen, wie ich sehe."],
+    onTime:  ["Pünktlich, wie immer.", "Regelmäßig wie ein Uhrwerk.", "Dein Durchschnitt dankt dir.", "Wie gewohnt, auf die Minute."],
+    late:    ["Du hast durchgehalten… na ja.", "Ein Rekord? Fast.", "Willenskraft hat Grenzen.", "Noch ein bisschen widerstehen… oder nicht."],
+  },
+  it: {
+    first:   ["La prima di quante?", "Buona fortuna per il resto.", "Eccoci, come sempre.", "E così inizia."],
+    tooSoon: ["Già? Sicuro?", "Lunga attesa… no.", "Il timer ha pietà di te.", "Stai battendo record, a quanto pare."],
+    onTime:  ["In orario, come al solito.", "Regolare come un orologio.", "La tua media ti ringrazia.", "Puntuale come sempre."],
+    late:    ["Hai resistito… suppongo.", "Un record? Quasi.", "La forza di volontà ha i suoi limiti.", "Resisti ancora un po'… o no."],
+  },
+  pt: {
+    first:   ["O primeiro de quantos?", "Boa sorte com o resto.", "Lá vamos nós, como sempre.", "E assim começa."],
+    tooSoon: ["Já? Sério?", "Foi uma longa espera… não.", "O cronômetro tem pena de você.", "Quebrando recordes, pelo visto."],
+    onTime:  ["Na hora certa, como sempre.", "Regular como um relógio.", "Sua média te agradece.", "Pontual como de costume."],
+    late:    ["Você aguentou… acho.", "Um recorde? Quase.", "A força de vontade tem limites.", "Resista mais um pouco… ou não."],
+  },
+  ru: {
+    first:   ["Первая из скольких?", "Удачи с остальными.", "Ну, поехали, как обычно.", "И так начинается."],
+    tooSoon: ["Уже? Серьёзно?", "Долго ждал… не очень.", "Таймер тебе сочувствует.", "Бьёшь рекорды, смотрю."],
+    onTime:  ["По расписанию, как всегда.", "Точно как часы.", "Твоя средняя тебе благодарна.", "Пунктуален, как обычно."],
+    late:    ["Продержался… наверное.", "Рекорд? Почти.", "Сила воли имеет пределы.", "Ещё немного… или нет."],
+  },
+  zh: {
+    first:   ["第一根，还有多少？", "祝后面好运。", "开始了，老样子。", "就这样开始了。"],
+    tooSoon: ["这么快？认真的？", "等了很久……才没有。", "计时器替你感到惋惜。", "又创纪录了。"],
+    onTime:  ["准时，一如既往。", "规律得像钟表。", "你的平均值谢谢你。", "老习惯，分秒不差。"],
+    late:    ["撑住了……算吧。", "纪录？差点。", "意志力总有极限。", "再撑一会儿……或者算了。"],
+  },
+  ja: {
+    first:   ["最初の一本、何本目まで？", "残りも頑張って。", "始まった、いつも通り。", "そして始まる。"],
+    tooSoon: ["もう？本当に？", "長い待ち時間…ではなかった。", "タイマーが同情している。", "記録更新中らしい。"],
+    onTime:  ["いつも通りのペースで。", "時計みたいに正確。", "平均値が感謝している。", "相変わらず、きっかりと。"],
+    late:    ["頑張ったね…まあ。", "記録？あと少し。", "意志力にも限界がある。", "もう少し我慢…しなくてもいい。"],
+  },
+  vi: {
+    first:   ["Điếu đầu tiên, còn bao nhiêu?", "Chúc may mắn với phần còn lại.", "Lại bắt đầu, như thường lệ.", "Và thế là bắt đầu."],
+    tooSoon: ["Đã rồi? Thật không?", "Chờ lâu lắm… không phải.", "Bộ đếm thời gian thương bạn đấy.", "Phá kỷ lục rồi đây."],
+    onTime:  ["Đúng giờ, như mọi khi.", "Đều đặn như đồng hồ.", "Mức trung bình của bạn cảm ơn bạn.", "Đúng hẹn như thường."],
+    late:    ["Bạn đã cầm cự… tôi đoán vậy.", "Kỷ lục? Gần rồi.", "Ý chí có giới hạn của nó.", "Cố thêm chút nữa… hay thôi."],
+  },
+  th: {
+    first:   ["มวนแรก แล้วจะกี่มวน?", "โชคดีกับมวนต่อไป", "เริ่มแล้ว เหมือนเดิม", "และนี่คือจุดเริ่มต้น"],
+    tooSoon: ["เร็วแล้ว จริงๆ?", "รอนานมาก…ไม่ใช่เลย", "นาฬิกาจับเวลาสงสารคุณ", "ทำลายสถิติอีกแล้ว"],
+    onTime:  ["ตรงเวลา เหมือนเคย", "สม่ำเสมอเหมือนนาฬิกา", "ค่าเฉลี่ยของคุณขอบคุณ", "ตรงนัดเสมอ"],
+    late:    ["คุณทนได้…สมมติ", "สถิติ? เกือบแล้ว", "ความตั้งใจมีขีดจำกัด", "ทนอีกนิด…หรือไม่ก็ได้"],
+  },
+  km: {
+    first:   ["ដំបូងក្នុងចំណោមប៉ុន្មាន?", "សូមជោគជ័យជាមួយនឹងដែលនៅសល់", "ចាប់ផ្តើមហើយ ដូចធម្មតា", "និងដូច្នេះវាចាប់ផ្តើម"],
+    tooSoon: ["ហើយហ្នឹង? ពិតមែនទេ?", "រង់ចាំយូរ… មិនប្រាកដទេ", "ម៉ោងកំណត់ពេលអាណិតអ្នក", "បំបែកកំណត់ត្រា ស្ងាប់ហើយ"],
+    onTime:  ["ទាន់ពេល ដូចធម្មតា", "ទៀងទាត់ដូចនាឡិកា", "ជាមធ្យមរបស់អ្នកអរគុណ", "ទៀងត្រង់ដូចធម្មតា"],
+    late:    ["អ្នកទ្រាំបាន… ខ្ញុំសន្មត់", "កំណត់ត្រា? ជិតដល់ហើយ", "មានឆន្ទៈក៏មានដែន", "ទ្រាំទៀតបន្តិច… ឬក៏អត់"],
+  },
+};
+
+function getSmokeLabel(minSinceLast, avgIntervalMin) {
+  const lang = currentLang || 'fr';
+  const labels = SMOKE_LABELS[lang] || SMOKE_LABELS.fr;
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  if (minSinceLast === null || minSinceLast === undefined) return pick(labels.first);
+  if (!avgIntervalMin || avgIntervalMin <= 0) return pick(labels.first);
+  const ratio = minSinceLast / avgIntervalMin;
+  if (ratio < 0.70) return pick(labels.tooSoon);
+  if (ratio <= 1.30) return pick(labels.onTime);
+  return pick(labels.late);
+}
+
 
 const MANUAL_TITLES = {
   fr:'📖 MANUEL', en:'📖 MANUAL', es:'📖 MANUAL', de:'📖 HANDBUCH',
