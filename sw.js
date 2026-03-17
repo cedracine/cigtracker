@@ -1,5 +1,5 @@
 // CigTracker Service Worker
-const CACHE_NAME = 'cigtracker-v2';
+const CACHE_NAME = 'cigtracker-v5';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
